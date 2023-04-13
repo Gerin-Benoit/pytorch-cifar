@@ -75,11 +75,14 @@ class SpectralNormConv(object):
             with torch.no_grad():
                 for _ in range(self.n_power_iterations):
                     if len(self.input_dim) == 4:  # 2D conv
+                        print('u', u.view(self.out_shape).shape)
                         v_s = conv_transpose2d(u.view(self.out_shape), weight, stride=stride,
                                                padding=padding, output_padding=0)
+                        print(stride, padding)
+                        print('v_s', v_s.shape)
                         # Note: out flag for in-place changes
                         v = normalize(v_s.view(-1), dim=0, eps=self.eps, out=v)
-
+                        print('v', v.shape)
                         u_s = conv2d(v.view(self.input_dim), weight, stride=stride, padding=padding,
                                      bias=None)
                     elif len(self.input_dim) == 5:  # 3D conv
