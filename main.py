@@ -10,16 +10,33 @@ import torchvision.transforms as transforms
 
 import os
 import argparse
+import random
+import wandb
 
 from models import *
 from utils import progress_bar
 
-
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
+
+parser.add_argument('--wandb_project', type=str, default='CIFAR10', help='wandb project name')
+parser.add_argument('--name', default="idiot without a name", help='Wandb run name')
+
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--resume', '-r', action='store_true',
                     help='resume from checkpoint')
+parser.add_argument('--seed', default=1, type=int, help='set the random seed')
+parser.add_argument('--num_workers', type=int, default=12, help='Number of workers')
+
+parser.add_argument('--c', type=float, default=0, help='Lipschitz constant: 0 for no SN, positive for soft, negative '
+                                                       'for hard')
 args = parser.parse_args()
+
+seed = args.seed
+random.seed(seed)
+# np.random.seed(seed)
+torch.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)
+# set_determinism(seed=seed)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 best_acc = 0  # best test accuracy
@@ -68,7 +85,8 @@ print('==> Building model..')
 # net = ShuffleNetV2(1)
 # net = EfficientNetB0()
 # net = RegNetX_200MF()
-net = SimpleDLA()
+#net = SimpleDLA()
+net = ResNet50(c=args.c, device=device)
 net = net.to(device)
 if device == 'cuda':
     net = torch.nn.DataParallel(net)
@@ -89,6 +107,10 @@ optimizer = optim.SGD(net.parameters(), lr=args.lr,
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 
 
+wandb.login()
+wandb.init(project=args.wandb_project, entity='max_and_ben')
+wandb.run.name = args.name
+
 # Training
 def train(epoch):
     print('\nEpoch: %d' % epoch)
@@ -103,6 +125,7 @@ def train(epoch):
         loss = criterion(outputs, targets)
         loss.backward()
         optimizer.step()
+        net.clamp_norm_layers()
 
         train_loss += loss.item()
         _, predicted = outputs.max(1)
@@ -110,7 +133,10 @@ def train(epoch):
         correct += predicted.eq(targets).sum().item()
 
         progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                     % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
+                     % (train_loss / (batch_idx + 1), 100. * correct / total, correct, total))
+    wandb.log(
+        {'Total Loss/train': train_loss/len(trainloader), 'Accuracy/train': 100. * correct / total},
+        step=epoch)
 
 
 def test(epoch):
@@ -131,10 +157,13 @@ def test(epoch):
             correct += predicted.eq(targets).sum().item()
 
             progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                         % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
+                         % (test_loss / (batch_idx + 1), 100. * correct / total, correct, total))
+    wandb.log(
+        {'Total Loss/val': test_loss / len(trainloader), 'Accuracy/val': 100. * correct / total},
+        step=epoch)
 
     # Save checkpoint.
-    acc = 100.*correct/total
+    acc = 100. * correct / total
     if acc > best_acc:
         print('Saving..')
         state = {
@@ -148,7 +177,9 @@ def test(epoch):
         best_acc = acc
 
 
-for epoch in range(start_epoch, start_epoch+200):
+for epoch in range(start_epoch, start_epoch + 200):
     train(epoch)
     test(epoch)
     scheduler.step()
+
+wandb.finish()
