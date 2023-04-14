@@ -159,6 +159,23 @@ class ResNet(nn.Module):
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return out
+    
+    def get_features(self, x):
+        out = F.relu(self.bn1(self.conv1(x)))
+        #print(out.shape)
+        out = self.layer1(out)
+        #print(out.shape)
+        out = self.layer2(out)
+        #print(out.shape)
+        out = self.layer3(out)
+        #print(out.shape)
+        out = self.layer4(out)
+        #print(out.shape)
+        out = F.avg_pool2d(out, 4)
+        f = out.view(out.size(0), -1)
+        out = self.linear(f)
+        return out, f
+        
 
     def clamp_norm_layers(self):
         if self.smoothness != 0:
