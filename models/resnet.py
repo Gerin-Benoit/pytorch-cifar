@@ -40,7 +40,8 @@ class ActNormLP2D(nn.Module):
                 var = torch.transpose(zero_mean ** 2, 0, 1).contiguous().view(self.num_channels, -1).mean(dim=1)
                 std = (var + self.eps) ** .5
                 log_scale = torch.log(1. / std)
-                self._log_scale.data = torch.clamp(log_scale, None, 0.0)
+                log_scale = torch.clamp(log_scale, None, 0.0)
+                self._log_scale.data = log_scale
                 self._shift.data = - mean * torch.exp(log_scale)
                 self._init = True
 
