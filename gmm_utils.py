@@ -91,7 +91,7 @@ def gmm_fit(embeddings, labels, num_classes):
         classwise_cov_features = torch.stack(
             [centered_cov_torch(embeddings[labels == c] - classwise_mean_features[c]) for c in range(num_classes)]
         )
-
+    print(JITTERS)
     with torch.no_grad():
         for jitter_eps in JITTERS:
             try:
