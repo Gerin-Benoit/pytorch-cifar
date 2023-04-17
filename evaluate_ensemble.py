@@ -161,7 +161,7 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
                     output, fm = net.get_features(inputs)
                     output = F.softmax(output, dim=-1)
                     outputs.append(output)
-                    fms.append(fm)
+                    fms.append(fm.to('cpu'))
 
                 outputs = torch.stack(outputs)
                 average_output = torch.mean(outputs, dim=0)
