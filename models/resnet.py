@@ -70,10 +70,10 @@ class BasicBlock(nn.Module):
             )
 
     def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)))
+        out = F.relu(self.bn1(self.conv1(x)), inplace=True)
         out = self.bn2(self.conv2(out))
         out += self.shortcut(x)
-        out = F.relu(out)
+        out = F.relu(out, inplace=True)
         return out
 
 
@@ -102,15 +102,15 @@ class Bottleneck(nn.Module):
             )
 
     def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)))
+        out = F.relu(self.bn1(self.conv1(x)), inplace=True)
         #print('1', out.shape)
-        out = F.relu(self.bn2(self.conv2(out)))
+        out = F.relu(self.bn2(self.conv2(out)), inplace=True)
         #print('1', out.shape)
         out = self.bn3(self.conv3(out))
         #print('1', out.shape)
         out += self.shortcut(x)
         #print('1', out.shape)
-        out = F.relu(out)
+        out = F.relu(out, inplace=True)
         #print('1', out.shape)
         return out
 
@@ -146,7 +146,7 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)))
+        out = F.relu(self.bn1(self.conv1(x)), inplace=True)
         #print(out.shape)
         out = self.layer1(out)
         #print(out.shape)
@@ -162,7 +162,7 @@ class ResNet(nn.Module):
         return out
     
     def get_features(self, x):
-        out = F.relu(self.bn1(self.conv1(x)))
+        out = F.relu(self.bn1(self.conv1(x)), inplace=True)
         #print(out.shape)
         out = self.layer1(out)
         #print(out.shape)
@@ -174,6 +174,7 @@ class ResNet(nn.Module):
         #print(out.shape)
         out = F.avg_pool2d(out, 4)
         f = out.view(out.size(0), -1)
+        print("feature map shape:", f.shape)
         out = self.linear(f)
         return out, f
         
