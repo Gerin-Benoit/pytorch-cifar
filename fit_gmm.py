@@ -104,7 +104,7 @@ embeddings, labels = get_embeddings(
     net,
     trainloader,
     num_dim=512 * 4,  # 512 * bottleneck block expansion
-    dtype=torch.float32,  # dtype = torch.double per default
+    dtype=torch.double,  # dtype = torch.double per default
     device=device,
     storage_device=device,
 )
