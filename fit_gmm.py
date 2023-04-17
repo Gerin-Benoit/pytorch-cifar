@@ -115,7 +115,7 @@ print("==> Saving model...")
 if not os.path.isdir(args.save_path):
     os.mkdir(args.save_path)
 save_name = os.path.join(args.save_path, model_name)
-state_dict = {'mean': gaussians_model.loc, 'covariance_matrix': gaussians_model.covariance_matrix}
+state_dict = {'mean': gaussians_model.loc.float(), 'covariance_matrix': gaussians_model.covariance_matrix.float()}
 print('mean', gaussians_model.loc.shape)
 print('cov', gaussians_model.covariance_matrix.shape)
 torch.save(state_dict, save_name)
