@@ -15,7 +15,7 @@ parser = argparse.ArgumentParser(description='Get all command line arguments.',
 parser.add_argument('--weight_path', type=str, help='path to the weight of the unet model')
 
 # data
-parser.add_argument('--dataset_name', type=str, default='CIFAR10', help='Specify the path to the data files directory')
+parser.add_argument('--dataset_name', type=str, default='CIFAR10', help='Specify to use CIFAR10 or CIFAR100')
 parser.add_argument('--save_path', type=str, help='path to a directory to save the features')
 # parser.add_argument('--data_dir', type=str, required=True, help='Specify the path to the data files directory')
 parser.add_argument('--seed', type=int, default=1, help='Specify the global random seed')
@@ -63,7 +63,7 @@ if args.dataset_name == 'CIFAR10':
     testloader = torch.utils.data.DataLoader(
         testset, batch_size=100, shuffle=False, num_workers=args.num_workers)
 
-elif args.wandb_project == 'CIFAR100':
+elif args.dataset_name == 'CIFAR100':
     num_classes = 100
     classes = ...
     trainset = torchvision.datasets.CIFAR100(
