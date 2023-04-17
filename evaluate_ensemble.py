@@ -190,6 +190,6 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
         net = net.to('cpu')
 
 
-evaluate(testloader, nets_constrained, gmms_loc, gmms_cov)
-evaluate(testloader, nets_unconstrained)
 
+evaluate(testloader, nets_unconstrained)
+evaluate(testloader, nets_constrained, gmms_loc, gmms_cov)
