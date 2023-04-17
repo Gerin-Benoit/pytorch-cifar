@@ -8,7 +8,7 @@ from torch import nn
 from tqdm import tqdm
 
 DOUBLE_INFO = torch.finfo(torch.double)
-JITTERS = [0, DOUBLE_INFO.tiny] + [10 ** exp for exp in range(-308, 0, 1)]
+JITTERS = [0, DOUBLE_INFO.tiny] + [10 ** exp for exp in range(-308, 1, 1)]
 
 
 def centered_cov_torch(x):
@@ -103,9 +103,11 @@ def gmm_fit(embeddings, labels, num_classes):
                 )
             except RuntimeError as e:
                 if "cholesky" in str(e):
+                    print("cholesky", jitter_eps)
                     continue
             except ValueError as e:
                 if "The parameter covariance_matrix has invalid values" in str(e):
+                    print("invalid", jitter_eps)
                     continue
             break
 
