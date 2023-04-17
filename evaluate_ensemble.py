@@ -96,7 +96,7 @@ gmms_loc = []
 gmms_cov = []
 for _, gmm_path in enumerate(args.path_gmms):
     state_dict = torch.load(gmm_path)
-    gmms_loc.append(state_dict["loc"])
+    gmms_loc.append(state_dict["mean"])
     gmms_cov.append(state_dict["covariance_matrix"])
     # gmm = distributions.MultivariateNormal(loc=mean, covariance_matrix=covariance_matrix)
 
