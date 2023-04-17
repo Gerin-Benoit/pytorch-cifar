@@ -174,7 +174,7 @@ class ResNet(nn.Module):
         #print(out.shape)
         out = F.avg_pool2d(out, 4)
         f = out.view(out.size(0), -1)
-        print("feature map shape:", f.shape)
+        #print("feature map shape:", f.shape)
         out = self.linear(f)
         return out, f
         
