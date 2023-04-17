@@ -173,21 +173,17 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
                     confidences.append(gmm_get_logits(gmm, fms[i]))
                 confidences = torch.stack(confidences)
 
-                print(outputs.shape)
-                print(confidences.shape)
                 weighted_average_output = torch.mean(torch.sum(confidences*outputs, dim=0)/torch.sum(confidences, dim=0, keepdim=True), dim=0)
 
-                print(weighted_average_output.shape)
                 wmean_loss = criterion(weighted_average_output, targets)
                 test_wmean_loss += wmean_loss.item()
                 _, predicted = weighted_average_output.max(1)
-                print(predicted.shape)
                 correct_wmean += predicted.eq(targets).sum().item()
 
 
 
 
-                progress_bar(batch_idx, len(testloader), 'Average Loss: %.3f | Average Acc: %.3f%% (%d/%d) | Weighted Average Loss: %.3f | Weighted Average Acc: %.3f%% (%d/%d)'
+                progress_bar(batch_idx, len(testloader), 'mLoss: %.3f | mAcc: %.3f%% (%d/%d) | wmLoss: %.3f | wmAcc: %.3f%% (%d/%d)'
                              % (test_mean_loss / (batch_idx + 1), 100. * correct_mean / total, correct_mean, total, test_wmean_loss / (batch_idx + 1), 100. * correct_wmean / total, correct_wmean, total))
 
     for net in nets:
