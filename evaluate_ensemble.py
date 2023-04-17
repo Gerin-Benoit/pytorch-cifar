@@ -68,10 +68,6 @@ else:
 # Model
 print('==> Loading models..')
 
-if args.wandb_project == 'CIFAR10':
-    num_classes = 10
-elif args.wandb_project == 'CIFAR100':
-    num_classes = 100
 
 nets_unconstrained = []
 for i, net_path in enumerate(args.path_unconstrained_nets):
