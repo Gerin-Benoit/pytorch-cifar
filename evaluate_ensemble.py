@@ -74,7 +74,7 @@ for i, net_path in enumerate(args.path_unconstrained_nets):
     net = ResNet50(c=0, num_classes=num_classes, norm_layer='batchnorm', device=device)
     net = net.to(device)
 
-    state_dict = torch.load(args.path)
+    state_dict = torch.load(net_path)
     net.load_state_dict(state_dict["net"])
     print(f'Unconstrained model {i + 1} best epoch is {state_dict["epoch"]} for {state_dict["acc"]} accuracy')
     nets_unconstrained.append(net)
@@ -87,7 +87,7 @@ for i, net_path in enumerate(args.path_constrained_nets):
 
     with torch.no_grad():
         _ = net(x)
-    state_dict = torch.load(args.path)
+    state_dict = torch.load(net_path)
     net.load_state_dict(state_dict["net"])
     print(f'Constrained model {i + 1} best epoch is {state_dict["epoch"]} for {state_dict["acc"]} accuracy')
     nets_constrained.append(net)
