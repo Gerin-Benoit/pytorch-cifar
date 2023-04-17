@@ -98,7 +98,7 @@ def gmm_fit(embeddings, labels, num_classes):
                     classwise_cov_features.shape[1], device=classwise_cov_features.device,
                 ).unsqueeze(0)
                 gmm = torch.distributions.MultivariateNormal(
-                    loc=classwise_mean_features, covariance_matrix=(classwise_cov_features + jitter),
+                    loc=classwise_mean_features.cpu(), covariance_matrix=(classwise_cov_features + jitter).cpu(),
                 )
                 #break
             except Exception as e:
