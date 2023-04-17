@@ -181,6 +181,7 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
                 wmean_loss = criterion(weighted_average_output, targets)
                 test_wmean_loss += wmean_loss.item()
                 _, predicted = weighted_average_output.max(0)
+                print(predicted.shape)
                 correct_wmean += predicted.eq(targets).sum().item()
 
 
