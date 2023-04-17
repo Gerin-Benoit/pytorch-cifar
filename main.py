@@ -83,7 +83,7 @@ if args.wandb_project == 'CIFAR10':
     classes = ('plane', 'car', 'bird', 'cat', 'deer',
                'dog', 'frog', 'horse', 'ship', 'truck')
 else:
-    classes = ... # TO DO
+    classes = ...  # TO DO
     
 
 # Model
