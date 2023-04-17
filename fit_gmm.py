@@ -17,7 +17,7 @@ parser.add_argument('--weight_path', type=str, help='path to the weight of the u
 # data
 parser.add_argument('--dataset_name', type=str, default='CIFAR10', help='Specify the path to the data files directory')
 parser.add_argument('--save_path', type=str, help='path to a directory to save the features')
-#parser.add_argument('--data_dir', type=str, required=True, help='Specify the path to the data files directory')
+# parser.add_argument('--data_dir', type=str, required=True, help='Specify the path to the data files directory')
 parser.add_argument('--seed', type=int, default=1, help='Specify the global random seed')
 parser.add_argument('--num_workers', type=int, default=12, help='Number of workers for dataloaders.')
 parser.add_argument('--batch_size_gmm', type=int, default=128, help='batch size for gmm')
@@ -80,9 +80,9 @@ else:
     exit(-1)
 
 model_name = args.dataset_name
-if args.c==0:
+if args.c == 0:
     model_name += '_unconstrained_'
-elif args.c>0:
+elif args.c > 0:
     model_name += '_soft_constrained_'
 else:
     model_name += '_hard_constrained_'
@@ -90,9 +90,14 @@ model_name += args.norm_layer + '_'
 model_name += str(args.seed) + '_gmm'
 
 net = ResNet50(c=args.c, num_classes=num_classes, norm_layer=args.norm_layer, device=device)
-net = net.to(device)
-print(net)
 
+net = net.to(device)
+x = torch.rand((1, 3, 32, 32)).to(device)
+with torch.no_grad():
+    _ = net(x)
+
+net.load_state_dict(torch.load(args.weight_path))
+print(net)
 
 print("==> GMM Model fitting...")
 embeddings, labels = get_embeddings(
@@ -105,7 +110,6 @@ embeddings, labels = get_embeddings(
 )
 
 gaussians_model, jitter_eps = gmm_fit(embeddings=embeddings, labels=labels, num_classes=num_classes)
-
 
 print("==> Saving model...")
 if not os.path.isdir(args.save_path):
