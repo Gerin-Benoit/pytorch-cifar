@@ -17,7 +17,7 @@ parser.add_argument('--weight_path', type=str, help='path to the weight of the u
 # data
 parser.add_argument('--dataset_name', type=str, default='CIFAR10', help='Specify the path to the data files directory')
 parser.add_argument('--save_path', type=str, help='path to a directory to save the features')
-parser.add_argument('--data_dir', type=str, required=True, help='Specify the path to the data files directory')
+#parser.add_argument('--data_dir', type=str, required=True, help='Specify the path to the data files directory')
 parser.add_argument('--seed', type=int, default=1, help='Specify the global random seed')
 parser.add_argument('--num_workers', type=int, default=12, help='Number of workers for dataloaders.')
 parser.add_argument('--batch_size_gmm', type=int, default=128, help='batch size for gmm')
