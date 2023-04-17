@@ -87,7 +87,7 @@ elif args.c > 0:
 else:
     model_name += '_hard_constrained_'
 model_name += args.norm_layer + '_'
-model_name += str(args.seed) + '_gmm'
+model_name += str(args.seed) + '_gmm.pth'
 
 net = ResNet50(c=0, num_classes=num_classes, norm_layer=args.norm_layer, device=device)
 
@@ -104,7 +104,7 @@ embeddings, labels = get_embeddings(
     net,
     trainloader,
     num_dim=512 * 4,  # 512 * bottleneck block expansion
-    dtype=torch.double,
+    dtype=torch.float16,  # dtype = torch.double per default
     device=device,
     storage_device=device,
 )
@@ -116,6 +116,6 @@ if not os.path.isdir(args.save_path):
     os.mkdir(args.save_path)
 save_name = os.path.join(args.save_path, model_name)
 state_dict = {'mean': gaussians_model.loc, 'covariance_matrix': gaussians_model.covariance_matrix}
-print('mean', gaussians_model.loc)
-print('cov', gaussians_model.covariance_matrix)
+print('mean', gaussians_model.shape)
+print('cov', gaussians_model.shape)
 torch.save(state_dict, save_name)
