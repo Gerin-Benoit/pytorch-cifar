@@ -89,7 +89,7 @@ else:
 model_name += args.norm_layer + '_'
 model_name += str(args.seed) + '_gmm'
 
-net = ResNet50(c=args.c, num_classes=num_classes, norm_layer=args.norm_layer, device=device)
+net = ResNet50(c=0, num_classes=num_classes, norm_layer=args.norm_layer, device=device)
 
 net = net.to(device)
 x = torch.rand((1, 3, 32, 32)).to(device)
