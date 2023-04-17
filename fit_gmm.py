@@ -21,6 +21,8 @@ parser.add_argument('--save_path', type=str, help='path to a directory to save t
 parser.add_argument('--seed', type=int, default=1, help='Specify the global random seed')
 parser.add_argument('--num_workers', type=int, default=12, help='Number of workers for dataloaders.')
 parser.add_argument('--batch_size_gmm', type=int, default=128, help='batch size for gmm')
+parser.add_argument('--c', type=float, default=0, help='Lipschitz constant: 0 for no SN, positive for soft, negative '
+                                                       'for hard')
 parser.add_argument('--norm_layer', default='batchnorm', help='norm layer to use : batchnorm or actnorm')
 
 args = parser.parse_args()
