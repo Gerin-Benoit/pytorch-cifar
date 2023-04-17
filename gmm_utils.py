@@ -100,7 +100,10 @@ def gmm_fit(embeddings, labels, num_classes):
                 gmm = torch.distributions.MultivariateNormal(
                     loc=classwise_mean_features, covariance_matrix=(classwise_cov_features + jitter),
                 )
-                break
+                #break
+            except Exception as e:
+                print(f"Error: {e}")
+            '''
             except RuntimeError as e:
                 if "cholesky" in str(e):
                     print("cholesky", jitter_eps)
@@ -109,6 +112,7 @@ def gmm_fit(embeddings, labels, num_classes):
                 if "The parameter covariance_matrix has invalid values" in str(e):
                     print("invalid", jitter_eps)
                     continue
+            '''
 
 
     return gmm, jitter_eps
