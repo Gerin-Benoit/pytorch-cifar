@@ -95,7 +95,7 @@ net = net.to(device)
 x = torch.rand((1, 3, 32, 32)).to(device)
 with torch.no_grad():
     _ = net(x)
-print(torch.load(args.weight_path)["net"])
+print(torch.load(args.weight_path)["net"].keys())
 net.load_state_dict(torch.load(args.weight_path)["net"])
 print(net)
 
