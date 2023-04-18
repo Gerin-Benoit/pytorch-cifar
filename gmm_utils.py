@@ -92,6 +92,8 @@ def gmm_fit(embeddings, labels, num_classes):
             [centered_cov_torch(embeddings[labels == c] - classwise_mean_features[c]) for c in range(num_classes)]
         )
     with torch.no_grad():
+        embeddings = embeddings.to('cpu')
+        torch.cuda.empty_cache()
         for jitter_eps in JITTERS:
             try:
                 jitter = jitter_eps * torch.eye(
