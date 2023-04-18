@@ -93,6 +93,7 @@ def gmm_fit(embeddings, labels, num_classes):
         )
     with torch.no_grad():
         embeddings = embeddings.to('cpu')
+        del embeddings
         torch.cuda.empty_cache()
         for jitter_eps in JITTERS:
             try:
