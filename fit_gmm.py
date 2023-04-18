@@ -105,9 +105,10 @@ embeddings, labels = get_embeddings(
     num_dim=512 * 4,  # 512 * bottleneck block expansion
     dtype=torch.double,  # dtype = torch.double per default
     device=device,
-    storage_device='cpu',  # default, device
+    storage_device=device,  # default, device
 )
-
+net = net.to('cpu')
+torch.cuda.empty_cache()
 gaussians_model, jitter_eps = gmm_fit(embeddings=embeddings, labels=labels, num_classes=num_classes)
 
 print("==> Saving model...")
