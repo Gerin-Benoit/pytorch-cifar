@@ -108,6 +108,8 @@ def gmm_fit(embeddings, labels, num_classes):
                 if "cholesky" in str(e):
                     print("cholesky", jitter_eps)
                     continue
+                if "CUDA" in str(e):
+                    print("CUDA", str(e))
             except ValueError as e:
                 if "The parameter covariance_matrix has invalid values" in str(e):
                     print("invalid", jitter_eps)
