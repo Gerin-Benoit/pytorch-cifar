@@ -107,7 +107,7 @@ if args.wandb_project == 'CIFAR10':
     num_classes = 10 
 elif args.wandb_project == 'CIFAR100':
     num_classes = 100
-net = ResNet50(c=args.c, num_classes=num_classes, norm_layer= args.norm_layer, device=device)
+net = ResNet50(c=args.c, num_classes=num_classes, norm_layer=args.norm_layer, device=device)
 net = net.to(device)
 print(net)
 """

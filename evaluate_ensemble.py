@@ -31,6 +31,8 @@ parser.add_argument('--path_constrained_nets', nargs='+', type=str, required=Tru
                     help='list of paths to the constrained nets')
 parser.add_argument('--path_unconstrained_nets', nargs='+', type=str, required=True,
                     help='list of paths to the unconstrained nets')
+
+parser.add_argument('--fix_statedict', action='store_true', default=False)
 args = parser.parse_args()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -87,8 +89,13 @@ for i, net_path in enumerate(args.path_constrained_nets):
 
     with torch.no_grad():
         _ = net(x)
+
     state_dict = torch.load(net_path)
-    net.load_state_dict(state_dict["net"])
+    net_dict = state_dict["net"]
+    if args.fix_statedict:
+        net_dict = fix_st(net_dict)
+
+    net.load_state_dict(net_dict)
     print(f'Constrained model {i + 1} best epoch is {state_dict["epoch"]} for {state_dict["acc"]} accuracy')
     nets_constrained.append(net)
 
@@ -160,6 +167,8 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
                     fms.append(fm)#.to('cpu'))
 
                 outputs = torch.stack(outputs)
+                outputs[outputs>=0.5]=1
+                outputs[outputs<0.5]=0
                 average_output = torch.mean(outputs, dim=0)
                 mean_loss = criterion(average_output, targets)
 
@@ -173,7 +182,28 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
                     confidences.append(gmm_get_logits(gmm, fms[i]))
                 confidences = torch.stack(confidences)
 
-                weighted_average_output = torch.mean(torch.sum(confidences*outputs, dim=0)/torch.sum(confidences, dim=0, keepdim=True), dim=0)
+                confidences = confidences - torch.min(confidences)
+                confidences = confidences/torch.max(confidences)
+
+                #temperature = 10
+                #confidences = F.softmax(confidences / temperature, dim=0)
+
+                weighted_average_output = torch.sum(confidences*outputs, dim=0)#torch.mean(torch.sum(confidences*outputs, dim=0)/torch.sum(confidences, dim=0, keepdim=True), dim=0)
+
+                '''
+                print('-'*20)
+                print('conf:', confidences[:,0,:])
+                print('out:', outputs[:, 0, :])
+
+                count_tensor = torch.zeros(100, dtype=torch.int64).to(device)
+                max_tensor = torch.argmax(outputs,dim=-1)
+                # Iterate through the rows of the input tensor
+
+                count_tensor += torch.eq(max_tensor[0], max_tensor[1])
+                count_tensor += torch.eq(max_tensor[1], max_tensor[2])
+                count_tensor += torch.eq(max_tensor[2], max_tensor[1])
+                print('diff',count_tensor)
+                '''
 
                 wmean_loss = criterion(weighted_average_output, targets)
                 test_wmean_loss += wmean_loss.item()

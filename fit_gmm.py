@@ -25,6 +25,8 @@ parser.add_argument('--c', type=float, default=0, help='Lipschitz constant: 0 fo
                                                        'for hard')
 parser.add_argument('--norm_layer', default='batchnorm', help='norm layer to use : batchnorm or actnorm')
 
+parser.add_argument('--fix_statedict', action='store_true', default=False)
+
 args = parser.parse_args()
 
 seed = args.seed
@@ -92,10 +94,16 @@ model_name += str(args.seed) + '_gmm.pth'
 net = ResNet50(c=0, num_classes=num_classes, norm_layer=args.norm_layer, device=device)
 
 net = net.to(device)
-x = torch.rand((1, 3, 32, 32)).to(device)
-with torch.no_grad():
-    _ = net(x)
-net.load_state_dict(torch.load(args.weight_path)["net"])
+if args.norm_layer == 'actnorm':
+    x = torch.rand((1, 3, 32, 32)).to(device)
+    with torch.no_grad():
+        _ = net(x)
+
+state_dict = torch.load(args.weight_path)["net"]
+if args.fix_statedict:
+    state_dict = fix_st(state_dict)
+
+net.load_state_dict(state_dict)
 print(net)
 
 print("==> GMM Model fitting...")
