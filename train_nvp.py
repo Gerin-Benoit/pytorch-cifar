@@ -17,7 +17,6 @@ import wandb
 from copy import deepcopy
 
 from models import *
-from realnvp import REALNVP
 
 from utils import progress_bar
 
@@ -28,12 +27,11 @@ parser.add_argument('--wandb_project', type=str, default='CIFAR10', help='wandb 
 #parser.add_argument('--name', default="idiot without a name", help='Wandb run name')
 
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
-parser.add_argument('--path', type = str, help='path to weights of main model')
+parser.add_argument('--model_name', type = str, help='name of main model')
 parser.add_argument('--seed', default=1, type=int, help='set the random seed (should be the same as the model from path)')
 parser.add_argument('--num_workers', type=int, default=12, help='Number of workers')
 parser.add_argument('--norm_layer', default='batchnorm', help='norm layer to use : batchnorm or actnorm')
-parser.add_argument('--c', type=float, default=0, help='Lipschitz constant: 0 for no SN, positive for soft, negative '
-                                                       'for hard')   # A retirer après car argument pas nécessaire
+
 args = parser.parse_args()
 
 
@@ -122,7 +120,7 @@ dim = 2048
 out_dim = 4096
 res_blocks = 2
 bottleneck = True
-size = 16
+size = 1
 type = 'checkerboard'
 nvp = RealNVP(in_dim, 
               dim, 
@@ -130,28 +128,14 @@ nvp = RealNVP(in_dim,
               res_blocks, 
               bottleneck, 
               size, 
-              type):
+              type)
 print('net')
 print(net)
 
 print('nvp')
 print(nvp)
 target = Normal(torch.tensor(0).float().cuda(), torch.tensor(1).float().cuda())
-"""
-if device == 'cuda':
-    net = torch.nn.DataParallel(net)
-    cudnn.benchmark = True
-"""
 
-
-if args.resume:
-    # Load checkpoint.
-    print('==> Resuming main model from checkpoint..')
-    checkpoint = torch.load(args.path)
-    net.load_state_dict(checkpoint['net'])
-    net.eval()
-    #best_acc = checkpoint['acc']
-    #start_epoch = checkpoint['epoch']
 
 
 criterion = neg_log_likelihood_2d
@@ -163,15 +147,9 @@ scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 wandb.login()
 project_name = 'nvp_' + args.wandb_project
 wandb.init(project=project_name, entity='max_and_ben')
-model_name = project_name
-if args.c==0:
-    model_name += '_unconstrained_'
-elif args.c>0:
-    model_name += '_soft_constrained_'
-else:
-    model_name += '_hard_constrained_'
-model_name += args.norm_layer + '_'
-model_name += str(args.seed)
+
+model_name = 'nvp_' + args.model_name
+
 wandb.run.name = model_name
 
 # Training
@@ -250,8 +228,7 @@ def test(loader, epoch, net, nvp, criterion):
             'epoch': epoch,
         }
         """
-        state = 
-        {
+        state = {
             'nvp':nvp.state_dict(),
             'loss':tot_loss,
             'epoch':epoch}

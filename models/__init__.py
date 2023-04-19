@@ -16,5 +16,6 @@ from .efficientnet import *
 from .regnet import *
 from .dla_simple import *
 from .dla import *
+from .realnvp import RealNVP
 from .spectral_norm_fc import remove_spectral_norm
 from .spectral_norm_conv_inplace import remove_spectral_norm_conv
