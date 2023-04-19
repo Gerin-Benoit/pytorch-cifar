@@ -191,7 +191,7 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
                 print('-'*20)
                 print('conf:', confidences[:,0,:])
                 print('out:', outputs[:, 0, :])
-                print('diff',torch.argmax(output), dim=-1)
+                print('diff',torch.argmax(output,dim=-1))
 
                 wmean_loss = criterion(weighted_average_output, targets)
                 test_wmean_loss += wmean_loss.item()
