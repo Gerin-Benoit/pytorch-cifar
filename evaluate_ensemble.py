@@ -182,7 +182,7 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
                     confidences.append(gmm_get_logits(gmm, fms[i]))
                 confidences = torch.stack(confidences)
 
-                confidences = confidences - torch.min(confidences)
+                #confidences = confidences - torch.min(confidences)
                 #confidences = confidences/torch.max(confidences)
 
                 temperature = 1
