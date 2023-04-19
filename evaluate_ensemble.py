@@ -195,12 +195,10 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
                 count_tensor = torch.zeros(100, dtype=torch.int64).to(device)
                 max_tensor = torch.argmax(outputs,dim=-1)
                 # Iterate through the rows of the input tensor
-                for i in range(max_tensor.shape[0]):
-                    # Find unique values and their counts for each row
-                    unique_values, counts = torch.unique(max_tensor[i], return_counts=True)
 
-                    # Update the count_tensor with the counts for the unique values
-                    count_tensor[unique_values] += counts
+                count_tensor += torch.eq(max_tensor[0], max_tensor[1])
+                count_tensor += torch.eq(max_tensor[1], max_tensor[2])
+                count_tensor += torch.eq(max_tensor[2], max_tensor[1])
                 print('diff',count_tensor)
 
                 wmean_loss = criterion(weighted_average_output, targets)
