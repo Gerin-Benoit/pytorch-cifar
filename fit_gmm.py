@@ -25,7 +25,7 @@ parser.add_argument('--c', type=float, default=0, help='Lipschitz constant: 0 fo
                                                        'for hard')
 parser.add_argument('--norm_layer', default='batchnorm', help='norm layer to use : batchnorm or actnorm')
 
-parser.add_argument('fix_statedict', action='store_true', default=False)
+parser.add_argument('--fix_statedict', action='store_true', default=False)
 
 args = parser.parse_args()
 
