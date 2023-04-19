@@ -167,6 +167,8 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
                     fms.append(fm)#.to('cpu'))
 
                 outputs = torch.stack(outputs)
+                outputs[outputs>=0.5]=1
+                outputs[outputs<0.5]=0
                 average_output = torch.mean(outputs, dim=0)
                 mean_loss = criterion(average_output, targets)
 
@@ -188,6 +190,7 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
 
                 weighted_average_output = torch.sum(confidences*outputs, dim=0)#torch.mean(torch.sum(confidences*outputs, dim=0)/torch.sum(confidences, dim=0, keepdim=True), dim=0)
 
+                '''
                 print('-'*20)
                 print('conf:', confidences[:,0,:])
                 print('out:', outputs[:, 0, :])
@@ -200,6 +203,7 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
                 count_tensor += torch.eq(max_tensor[1], max_tensor[2])
                 count_tensor += torch.eq(max_tensor[2], max_tensor[1])
                 print('diff',count_tensor)
+                '''
 
                 wmean_loss = criterion(weighted_average_output, targets)
                 test_wmean_loss += wmean_loss.item()
