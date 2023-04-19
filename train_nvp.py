@@ -162,8 +162,6 @@ def train(loader, epoch, net, nvp, criterion, optimizer):
     net.eval()
     nvp.train()
     train_loss = 0
-    correct = 0
-    total = 0
     for batch_idx, (inputs, targets) in enumerate(loader):
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
@@ -176,16 +174,13 @@ def train(loader, epoch, net, nvp, criterion, optimizer):
         #net.clamp_norm_layers()
 
         train_loss += loss.item()
-        _, predicted = outputs.max(1)
-        total += targets.size(0)
-        correct += predicted.eq(targets).sum().item()
 
-        progress_bar(batch_idx, len(loader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                     % (train_loss / (batch_idx + 1), 100. * correct / total, correct, total))
+
+        progress_bar(batch_idx, len(loader), 'Loss: %.3f'
+                     % (train_loss / (batch_idx + 1)))
     wandb.log(
-        {'Total Loss/train': train_loss/len(loader), 'Accuracy/train': 100. * correct / total},
+        {'Total Loss/train': train_loss/len(loader)},
         step=epoch)
-
 
 def test(loader, epoch, net, nvp, criterion):
     global best_loss
