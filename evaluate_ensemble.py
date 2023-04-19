@@ -31,6 +31,8 @@ parser.add_argument('--path_constrained_nets', nargs='+', type=str, required=Tru
                     help='list of paths to the constrained nets')
 parser.add_argument('--path_unconstrained_nets', nargs='+', type=str, required=True,
                     help='list of paths to the unconstrained nets')
+
+parser.add_argument('--fix_statedict', action='store_true', default=False)
 args = parser.parse_args()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -87,8 +89,13 @@ for i, net_path in enumerate(args.path_constrained_nets):
 
     with torch.no_grad():
         _ = net(x)
+
     state_dict = torch.load(net_path)
-    net.load_state_dict(state_dict["net"])
+    net_dict = state_dict["net"]
+    if args.fix_statedict:
+        net_dict = fix_st(net_dict)
+
+    net.load_state_dict(net_dict)
     print(f'Constrained model {i + 1} best epoch is {state_dict["epoch"]} for {state_dict["acc"]} accuracy')
     nets_constrained.append(net)
 
