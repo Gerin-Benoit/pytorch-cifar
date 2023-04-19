@@ -238,3 +238,18 @@ def wrapper_spectral_norm(layer, kernel_size, c=0, shape=0):
             # use spectral norm based on conv, because bound not tight
             return spectral_norm_conv(layer, -c, shape,
                                       n_power_iterations=1)
+
+
+def fix_st(state_dict):
+    # Create a new state_dict with the desired key changes
+    new_state_dict = {}
+    for key, value in state_dict.items():
+        if key.endswith('weight_orig'):
+            # Rename keys ending with 'weight_orig' to end with 'weight'
+            new_key = key[:-5]
+            new_state_dict[new_key] = value
+        elif 'weight_' not in key:
+            # Keep other keys that do not contain 'weight_'
+            new_state_dict[key] = value
+
+    return new_state_dict
