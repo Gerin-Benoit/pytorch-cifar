@@ -214,7 +214,7 @@ def test():
     print(y.size())
 
 
-def wrapper_spectral_norm(layer, shape, kernel_size, c=1):
+def wrapper_spectral_norm(layer, shape, kernel_size, c=0):
     if c == 0:
         return layer
     if c > 0:
