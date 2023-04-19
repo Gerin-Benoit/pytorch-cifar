@@ -191,7 +191,17 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
                 print('-'*20)
                 print('conf:', confidences[:,0,:])
                 print('out:', outputs[:, 0, :])
-                print('diff',torch.argmax(outputs,dim=-1))
+
+                count_tensor = torch.zeros(100, dtype=torch.int64)
+                max_tensor = torch.argmax(outputs,dim=-1)
+                # Iterate through the rows of the input tensor
+                for i in range(max_tensor.shape[0]):
+                    # Find unique values and their counts for each row
+                    unique_values, counts = torch.unique(max_tensor[i], return_counts=True)
+
+                    # Update the count_tensor with the counts for the unique values
+                    count_tensor[unique_values] += counts
+                print('diff',count_tensor)
 
                 wmean_loss = criterion(weighted_average_output, targets)
                 test_wmean_loss += wmean_loss.item()
