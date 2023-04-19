@@ -58,14 +58,15 @@ class BasicBlock(nn.Module):
             in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False), kernel_size=3, c=c, shape=shape)
         self.bn1 = norm(planes)
         self.conv2 = wrapper_spectral_norm(nn.Conv2d(planes, planes, kernel_size=3,
-                               stride=1, padding=1, bias=False), kernel_size=3, c=c, shape=shape)
+                                                     stride=1, padding=1, bias=False), kernel_size=3, c=c, shape=shape)
         self.bn2 = norm(planes)
 
         self.shortcut = nn.Sequential()
         if stride != 1 or in_planes != self.expansion * planes:
             self.shortcut = nn.Sequential(
                 wrapper_spectral_norm(nn.Conv2d(in_planes, self.expansion * planes,
-                          kernel_size=1, stride=stride, bias=False), kernel_size=1, c=c, shape=shape),
+                                                kernel_size=1, stride=stride, bias=False), kernel_size=1, c=c,
+                                      shape=shape),
                 norm(self.expansion * planes)
             )
 
@@ -82,59 +83,64 @@ class Bottleneck(nn.Module):
 
     def __init__(self, in_planes, planes, stride=1, norm=nn.BatchNorm2d, c=0, shape=None):
         super(Bottleneck, self).__init__()
-        self.conv1 = wrapper_spectral_norm(nn.Conv2d(in_planes, planes, kernel_size=1, bias=False), kernel_size=1, c=c, shape=shape)
+        self.conv1 = wrapper_spectral_norm(nn.Conv2d(in_planes, planes, kernel_size=1, bias=False), kernel_size=1, c=c,
+                                           shape=shape)
         self.bn1 = norm(planes)
         if stride == 2:
-            shape = (shape[0], shape[1]//2, shape[2]//2)
+            shape = (shape[0], shape[1] // 2, shape[2] // 2)
         self.conv2 = wrapper_spectral_norm(nn.Conv2d(planes, planes, kernel_size=3,
-                               stride=stride, padding=1, bias=False), kernel_size=3, c=c, shape=shape)
+                                                     stride=stride, padding=1, bias=False), kernel_size=3, c=c,
+                                           shape=shape)
         self.bn2 = norm(planes)
         self.conv3 = wrapper_spectral_norm(nn.Conv2d(planes, self.expansion *
-                               planes, kernel_size=1, bias=False), kernel_size=1, c=c, shape=shape)
+                                                     planes, kernel_size=1, bias=False), kernel_size=1, c=c,
+                                           shape=shape)
         self.bn3 = norm(self.expansion * planes)
 
         self.shortcut = nn.Sequential()
         if stride != 1 or in_planes != self.expansion * planes:
             self.shortcut = nn.Sequential(
                 wrapper_spectral_norm(nn.Conv2d(in_planes, self.expansion * planes,
-                          kernel_size=1, stride=stride, bias=False), kernel_size=1, c=c, shape=shape),
+                                                kernel_size=1, stride=stride, bias=False), kernel_size=1, c=c,
+                                      shape=shape),
                 norm(self.expansion * planes)
             )
 
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)), inplace=True)
-        #print('1', out.shape)
+        # print('1', out.shape)
         out = F.relu(self.bn2(self.conv2(out)), inplace=True)
-        #print('1', out.shape)
+        # print('1', out.shape)
         out = self.bn3(self.conv3(out))
-        #print('1', out.shape)
+        # print('1', out.shape)
         out += self.shortcut(x)
-        #print('1', out.shape)
+        # print('1', out.shape)
         out = F.relu(out, inplace=True)
-        #print('1', out.shape)
+        # print('1', out.shape)
         return out
 
 
 class ResNet(nn.Module):
     def __init__(self, block, num_blocks, num_classes=10, norm=nn.BatchNorm2d, c=0, device='cpu'):
         super(ResNet, self).__init__()
-        img_size = (3,32,32)
+        img_size = (3, 32, 32)
         self.in_planes = 64
 
         self.conv1 = wrapper_spectral_norm(nn.Conv2d(3, 64, kernel_size=3,
-                                            stride=1, padding=1, bias=False), kernel_size=3, c=c, shape=img_size)
+                                                     stride=1, padding=1, bias=False), kernel_size=3, c=c,
+                                           shape=img_size)
         self.bn1 = norm(64)
-        shape = (64,32,32)
+        shape = (64, 32, 32)
         self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1, norm=norm, c=c, shape=shape)
-        shape = (128,32,32)
+        shape = (128, 32, 32)
         self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2, norm=norm, c=c, shape=shape)
-        shape = (256,16,16)
+        shape = (256, 16, 16)
         self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2, norm=norm, c=c, shape=shape)
-        shape = (512,8,8)
+        shape = (512, 8, 8)
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2, norm=norm, c=c, shape=shape)
         self.linear = nn.Linear(512 * block.expansion, num_classes)
 
-        self.device=device
+        self.device = device
         self.smoothness = torch.tensor(c).to(self.device)
 
     def _make_layer(self, block, planes, num_blocks, stride, norm=nn.BatchNorm2d, c=0, shape=None):
@@ -147,37 +153,36 @@ class ResNet(nn.Module):
 
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)), inplace=True)
-        #print(out.shape)
+        # print(out.shape)
         out = self.layer1(out)
-        #print(out.shape)
+        # print(out.shape)
         out = self.layer2(out)
-        #print(out.shape)
+        # print(out.shape)
         out = self.layer3(out)
-        #print(out.shape)
+        # print(out.shape)
         out = self.layer4(out)
-        #print(out.shape)
+        # print(out.shape)
         out = F.avg_pool2d(out, 4)
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return out
-    
+
     def get_features(self, x):
         out = F.relu(self.bn1(self.conv1(x)), inplace=True)
-        #print(out.shape)
+        # print(out.shape)
         out = self.layer1(out)
-        #print(out.shape)
+        # print(out.shape)
         out = self.layer2(out)
-        #print(out.shape)
+        # print(out.shape)
         out = self.layer3(out)
-        #print(out.shape)
+        # print(out.shape)
         out = self.layer4(out)
-        #print(out.shape)
+        # print(out.shape)
         out = F.avg_pool2d(out, 4)
         f = out.view(out.size(0), -1)
-        #print("feature map shape:", f.shape)
+        # print("feature map shape:", f.shape)
         out = self.linear(f)
         return out, f
-        
 
     def clamp_norm_layers(self):
         if self.smoothness != 0:
@@ -195,9 +200,9 @@ def ResNet34():
     return ResNet(BasicBlock, [3, 4, 6, 3])
 
 
-def ResNet50(c=0, num_classes=10, norm_layer = 'batchnorm', device='cpu'):
-    return ResNet(Bottleneck, [3, 4, 6, 3], num_classes=num_classes, norm=nn.BatchNorm2d if norm_layer=='batchnorm' else ActNormLP2D, c=c, device=device)
-    
+def ResNet50(c=0, num_classes=10, norm_layer='batchnorm', device='cpu'):
+    return ResNet(Bottleneck, [3, 4, 6, 3], num_classes=num_classes,
+                  norm=nn.BatchNorm2d if norm_layer == 'batchnorm' else ActNormLP2D, c=c, device=device)
 
 
 def ResNet101():
@@ -216,12 +221,15 @@ def test():
 
 def wrapper_spectral_norm(layer, kernel_size, c=0, shape=0):
     if c == 0:
+
         return layer
     if c > 0:
+        print("COUCOU+")
         return spectral_norm_fc(layer, c,
                                 n_power_iterations=1)
 
     if c < 0:
+        print("COUCOU-")
         if kernel_size == 1:
             # use spectral norm fc, because bound are tight for 1x convolutions
             return spectral_norm_fc(layer, -c,
