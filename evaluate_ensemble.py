@@ -167,8 +167,8 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
                     fms.append(fm)#.to('cpu'))
 
                 outputs = torch.stack(outputs)
-                outputs[outputs>=0.5]=1
-                outputs[outputs<0.5]=0
+                #outputs[outputs>=0.5]=1
+                #outputs[outputs<0.5]=0
                 average_output = torch.mean(outputs, dim=0)
                 mean_loss = criterion(average_output, targets)
 
