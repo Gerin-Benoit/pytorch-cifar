@@ -192,7 +192,7 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
                 print('conf:', confidences[:,0,:])
                 print('out:', outputs[:, 0, :])
 
-                count_tensor = torch.zeros(100, dtype=torch.int64)
+                count_tensor = torch.zeros(100, dtype=torch.int64).to(device)
                 max_tensor = torch.argmax(outputs,dim=-1)
                 # Iterate through the rows of the input tensor
                 for i in range(max_tensor.shape[0]):
