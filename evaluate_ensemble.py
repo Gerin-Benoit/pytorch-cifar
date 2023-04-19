@@ -182,8 +182,8 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
 
                 confidences = confidences - torch.min(confidences) + 1e-2
 
-                #temperature = 0.1
-                #confidences = F.softmax(confidences / temperature, dim=0)
+                temperature = 1
+                confidences = F.softmax(confidences / temperature, dim=0)
 
                 weighted_average_output = torch.sum(confidences*outputs, dim=0)#torch.mean(torch.sum(confidences*outputs, dim=0)/torch.sum(confidences, dim=0, keepdim=True), dim=0)
 
