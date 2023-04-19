@@ -17,7 +17,10 @@ import wandb
 from copy import deepcopy
 
 from models import *
-#import normflows as nf
+# FrEIA imports
+import FrEIA.framework as Ff
+import FrEIA.modules as Fm
+
 
 from utils import progress_bar
 
@@ -27,7 +30,7 @@ parser = argparse.ArgumentParser(description='PyTorch CIFAR Training')
 parser.add_argument('--wandb_project', type=str, default='CIFAR10', help='wandb project name')
 #parser.add_argument('--name', default="idiot without a name", help='Wandb run name')
 
-parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
+parser.add_argument('--lr', default=1e-4, type=float, help='learning rate')
 parser.add_argument('--model_name', type = str, help='name of main model')
 parser.add_argument('--seed', default=1, type=int, help='set the random seed (should be the same as the model from path)')
 parser.add_argument('--num_workers', type=int, default=12, help='Number of workers')
@@ -37,8 +40,10 @@ args = parser.parse_args()
 
 
 def neg_log_likelihood_2d(target, z, log_det):
-	log_likelihood_per_dim = target.log_prob(z) + log_det
-	return -log_likelihood_per_dim.mean()
+    #log_likelihood_per_dim = target.log_prob(z) + log_det
+    #return -log_likelihood_per_dim.mean()
+    
+    return 0.5*torch.sum(z**2, 1) - log_det
 
 seed = args.seed
 random.seed(seed)
@@ -118,10 +123,11 @@ net = net.to(device)
 
 
 in_dim = 2048
-dim = 2048
+"""
+dim = 1024
 
 out_dim = 4096
-res_blocks = 2
+res_blocks = 1
 bottleneck = True
 size = 1
 type = 'checkerboard'
@@ -132,16 +138,32 @@ flow = RealNVP(in_dim,
               bottleneck, 
               size, 
               type)
+flow = flow.to(device)
 print('net')
 print(net)
 
-print('nvp')
-print(nvp)
+print('flow')
+print(flow)
+"""
 """
 n_layers = 3
 flow = zuko.flows.MAF(in_dim, 0, transforms=n_layers, hidden_features=[dim] * n_layers)
-target = Normal(torch.tensor(0).float().cuda(), torch.tensor(1).float().cuda())
 """
+n_layers = 3
+# we define a subnet for use inside an affine coupling block
+# for more detailed information see the full tutorial
+def subnet_fc(dims_in, dims_out):
+    return nn.Sequential(nn.Linear(dims_in, 512), nn.ReLU(),
+                         nn.Linear(512,  dims_out))
+
+# a simple chain of operations is collected by ReversibleSequential
+flow = Ff.SequenceINN(in_dim)
+for k in range(n_layers):
+    flow.append(Fm.AllInOneBlock, subnet_constructor=subnet_fc)#, permute_soft=True)
+    
+flow = flow.to(device)
+target = Normal(torch.tensor(0).float().cuda(), torch.tensor(1).float().cuda())
+
 criterion = neg_log_likelihood_2d
 optimizer = optim.SGD(flow.parameters(), lr=args.lr,
                       momentum=0.9, weight_decay=5e-4)
@@ -162,16 +184,18 @@ def train(loader, epoch, net, flow, criterion, optimizer):
     net.eval()
     flow.train()
     train_loss = 0
+    N_DIM = 2048
     for batch_idx, (inputs, targets) in enumerate(loader):
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
         with torch.no_grad():
+            print(inputs.size())
             outputs, features = net.get_features(inputs)
         print(features.size())
-        features = features.unsqueeze(-1).unsqueeze(-1)
+        #features = features.unsqueeze(-1).unsqueeze(-1)
         z, log_det = flow(features)
         loss = criterion(target, z, log_det)
-        
+        loss = loss.mean() / N_DIM
         #loss = -flow()
         loss.backward()
         optimizer.step()
@@ -192,13 +216,15 @@ def test(loader, epoch, net, flow, criterion):
     flow.eval()
     test_loss = 0
     total = 0
+    N_DIM = 2048
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(loader):
             inputs, targets = inputs.to(device), targets.to(device)
             outputs, features = net.get_features(inputs)
             z, log_det = flow(features)
-            
             loss = criterion(target, z, log_det)
+            loss = loss.mean() / N_DIM
+        
 
             test_loss += loss.item()
 

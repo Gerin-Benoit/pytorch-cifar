@@ -187,5 +187,6 @@ if __name__ == "__main__":
     im = torch.rand(2,32,16,16)
     res = RealNVP(32, 32, 64, 2, True, 16, 'checkerboard')
     z, log_det = res(im)
+    print(z)
     print(z.shape)
     print(log_det.shape)
