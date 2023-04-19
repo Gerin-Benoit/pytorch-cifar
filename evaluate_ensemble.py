@@ -172,6 +172,8 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
                     gmm = distributions.MultivariateNormal(loc=loc, covariance_matrix=cov)
                     confidences.append(gmm_get_logits(gmm, fms[i]))
                 confidences = torch.stack(confidences)
+                
+                confidences = confidences - torch.min(confidences) + 1e-2
 
                 weighted_average_output = torch.mean(torch.sum(confidences*outputs, dim=0)/torch.sum(confidences, dim=0, keepdim=True), dim=0)
 
