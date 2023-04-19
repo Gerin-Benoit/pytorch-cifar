@@ -17,6 +17,8 @@ import wandb
 from copy import deepcopy
 
 from models import *
+from realnvp import REALNVP
+
 from utils import progress_bar
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR Training')
@@ -115,9 +117,25 @@ elif args.wandb_project == 'CIFAR100':
 net = ResNet50(c=0, num_classes=num_classes, norm_layer= args.norm_layer, device=device)
 net = net.to(device)
 
-nvp = ...
+in_dim = 2048
+dim = 2048
+out_dim = 4096
+res_blocks = 2
+bottleneck = True
+size = 16
+type = 'checkerboard'
+nvp = RealNVP(in_dim, 
+              dim, 
+              out_dim, 
+              res_blocks, 
+              bottleneck, 
+              size, 
+              type):
+print('net')
 print(net)
 
+print('nvp')
+print(nvp)
 target = Normal(torch.tensor(0).float().cuda(), torch.tensor(1).float().cuda())
 """
 if device == 'cuda':
