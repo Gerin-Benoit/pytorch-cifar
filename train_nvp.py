@@ -22,7 +22,7 @@ from utils import progress_bar
 parser = argparse.ArgumentParser(description='PyTorch CIFAR Training')
 
 
-parser.add_argument('--wandb_project', type=str, default='CIFAR10_nvp', help='wandb project name')
+parser.add_argument('--wandb_project', type=str, default='CIFAR10', help='wandb project name')
 #parser.add_argument('--name', default="idiot without a name", help='Wandb run name')
 
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
@@ -30,6 +30,8 @@ parser.add_argument('--path', type = str, help='path to weights of main model')
 parser.add_argument('--seed', default=1, type=int, help='set the random seed (should be the same as the model from path)')
 parser.add_argument('--num_workers', type=int, default=12, help='Number of workers')
 parser.add_argument('--norm_layer', default='batchnorm', help='norm layer to use : batchnorm or actnorm')
+parser.add_argument('--c', type=float, default=0, help='Lipschitz constant: 0 for no SN, positive for soft, negative '
+                                                       'for hard')   # A retirer après car argument pas nécessaire
 args = parser.parse_args()
 
 
@@ -45,7 +47,7 @@ torch.cuda.manual_seed_all(seed)
 # set_determinism(seed=seed)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-best_acc = 0  # best test accuracy
+best_loss = 9e99  # best loss accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 
 
@@ -141,8 +143,9 @@ scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 
 
 wandb.login()
-wandb.init(project=args.wandb_project, entity='max_and_ben')
-model_name = args.wandb_project
+project_name = 'nvp_' + args.wandb_project
+wandb.init(project=project_name, entity='max_and_ben')
+model_name = project_name
 if args.c==0:
     model_name += '_unconstrained_'
 elif args.c>0:
@@ -154,14 +157,14 @@ model_name += str(args.seed)
 wandb.run.name = model_name
 
 # Training
-def train(epoch, net, nvp, criterion, optimizer):
+def train(loader, epoch, net, nvp, criterion, optimizer):
     print('\nEpoch: %d' % epoch)
     net.eval()
     nvp.train()
     train_loss = 0
     correct = 0
     total = 0
-    for batch_idx, (inputs, targets) in enumerate(trainloader):
+    for batch_idx, (inputs, targets) in enumerate(loader):
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
         with torch.no_grad():
@@ -177,22 +180,21 @@ def train(epoch, net, nvp, criterion, optimizer):
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
 
-        progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
+        progress_bar(batch_idx, len(loader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
                      % (train_loss / (batch_idx + 1), 100. * correct / total, correct, total))
     wandb.log(
-        {'Total Loss/train': train_loss/len(trainloader), 'Accuracy/train': 100. * correct / total},
+        {'Total Loss/train': train_loss/len(loader), 'Accuracy/train': 100. * correct / total},
         step=epoch)
 
 
-def test(epoch, net, nvp, criterion):
-    global best_acc
+def test(loader, epoch, net, nvp, criterion):
+    global best_loss
     net.eval()
     nvp.eval()
     test_loss = 0
-    correct = 0
     total = 0
     with torch.no_grad():
-        for batch_idx, (inputs, targets) in enumerate(testloader):
+        for batch_idx, (inputs, targets) in enumerate(loader):
             inputs, targets = inputs.to(device), targets.to(device)
             outputs, features = net.get_features(inputs)
             z, log_det = nvp(features)
@@ -200,21 +202,19 @@ def test(epoch, net, nvp, criterion):
             loss = criterion(target, z, log_det)
 
             test_loss += loss.item()
-            _, predicted = outputs.max(1)
-            total += targets.size(0)
-            correct += predicted.eq(targets).sum().item()
 
-            progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                         % (test_loss / (batch_idx + 1), 100. * correct / total, correct, total))
+            progress_bar(batch_idx, len(loader), 'Loss: %.3f'
+                         % (test_loss / (batch_idx + 1)))
+    tot_loss =  test_loss / len(loader)
     wandb.log(
-        {'Total Loss/val': test_loss / len(trainloader), 'Accuracy/val': 100. * correct / total},
+        {'Total Loss/val': tot_loss},
         step=epoch)
 
     # Save checkpoint.
-    acc = 100. * correct / total
-    if acc > best_acc:
+    if tot_loss < best_loss:
         print('Saving..')
-        net = net.cpu()
+        """
+        nvp = net.nvp()
         model_copy = deepcopy(net)
         net = net.to(device)
         for name, p in model_copy.named_modules():
@@ -230,23 +230,27 @@ def test(epoch, net, nvp, criterion):
                     pass
             else:
                 pass
-                
+             
         state = {
             'net': model_copy.state_dict(),
             'acc': acc,
             'epoch': epoch,
         }
+        """
+        state = 
+        {
+            'nvp':nvp.state_dict(),
+            'loss':tot_loss,
+            'epoch':epoch}
+        
         if not os.path.isdir('checkpoint'):
             os.mkdir('checkpoint')
         torch.save(state, './checkpoint/{}.pth'.format(model_name))
-        best_acc = acc
+        best_loss = tot_loss
         
-
-
-
 for epoch in range(start_epoch, start_epoch + 200):
-    train(epoch, net, nvp, criterion, optimizer)
-    test(epoch, net, nvp, criterion)
+    train(trainloader, epoch, net, nvp, criterion, optimizer)
+    test(testloader, epoch, net, nvp, criterion)
     scheduler.step()
 
 wandb.finish()
