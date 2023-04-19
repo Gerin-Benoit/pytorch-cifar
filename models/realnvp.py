@@ -175,6 +175,7 @@ class RealNVP(nn.Module):
     def forward(self, z):
         z, log_det_J_total = z, torch.zeros_like(z)
         for transform in self.transforms:
+            print('z', z.size())
             z, log_det = transform(z)
             log_det_J_total += log_det
 

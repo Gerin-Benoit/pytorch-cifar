@@ -17,6 +17,7 @@ import wandb
 from copy import deepcopy
 
 from models import *
+#import normflows as nf
 
 from utils import progress_bar
 
@@ -115,14 +116,16 @@ elif args.wandb_project == 'CIFAR100':
 net = ResNet50(c=0, num_classes=num_classes, norm_layer= args.norm_layer, device=device)
 net = net.to(device)
 
+
 in_dim = 2048
 dim = 2048
+
 out_dim = 4096
 res_blocks = 2
 bottleneck = True
 size = 1
 type = 'checkerboard'
-nvp = RealNVP(in_dim, 
+flow = RealNVP(in_dim, 
               dim, 
               out_dim, 
               res_blocks, 
@@ -134,37 +137,42 @@ print(net)
 
 print('nvp')
 print(nvp)
+"""
+n_layers = 3
+flow = zuko.flows.MAF(in_dim, 0, transforms=n_layers, hidden_features=[dim] * n_layers)
 target = Normal(torch.tensor(0).float().cuda(), torch.tensor(1).float().cuda())
-
-
-
+"""
 criterion = neg_log_likelihood_2d
-optimizer = optim.SGD(nvp.parameters(), lr=args.lr,
+optimizer = optim.SGD(flow.parameters(), lr=args.lr,
                       momentum=0.9, weight_decay=5e-4)
-scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
 
 
 wandb.login()
-project_name = 'nvp_' + args.wandb_project
+project_name = 'flow_' + args.wandb_project
 wandb.init(project=project_name, entity='max_and_ben')
 
-model_name = 'nvp_' + args.model_name
+model_name = 'flow_' + args.model_name
 
 wandb.run.name = model_name
 
 # Training
-def train(loader, epoch, net, nvp, criterion, optimizer):
+def train(loader, epoch, net, flow, criterion, optimizer):
     print('\nEpoch: %d' % epoch)
     net.eval()
-    nvp.train()
+    flow.train()
     train_loss = 0
     for batch_idx, (inputs, targets) in enumerate(loader):
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
         with torch.no_grad():
             outputs, features = net.get_features(inputs)
-        z, log_det = nvp(features)
+        print(features.size())
+        features = features.unsqueeze(-1).unsqueeze(-1)
+        z, log_det = flow(features)
         loss = criterion(target, z, log_det)
+        
+        #loss = -flow()
         loss.backward()
         optimizer.step()
         #net.clamp_norm_layers()
@@ -178,17 +186,17 @@ def train(loader, epoch, net, nvp, criterion, optimizer):
         {'Total Loss/train': train_loss/len(loader)},
         step=epoch)
 
-def test(loader, epoch, net, nvp, criterion):
+def test(loader, epoch, net, flow, criterion):
     global best_loss
     net.eval()
-    nvp.eval()
+    flow.eval()
     test_loss = 0
     total = 0
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(loader):
             inputs, targets = inputs.to(device), targets.to(device)
             outputs, features = net.get_features(inputs)
-            z, log_det = nvp(features)
+            z, log_det = flow(features)
             
             loss = criterion(target, z, log_det)
 
@@ -229,7 +237,7 @@ def test(loader, epoch, net, nvp, criterion):
         }
         """
         state = {
-            'nvp':nvp.state_dict(),
+            'flow':flow.state_dict(),
             'loss':tot_loss,
             'epoch':epoch}
         
@@ -239,8 +247,8 @@ def test(loader, epoch, net, nvp, criterion):
         best_loss = tot_loss
         
 for epoch in range(start_epoch, start_epoch + 200):
-    train(trainloader, epoch, net, nvp, criterion, optimizer)
-    test(testloader, epoch, net, nvp, criterion)
+    train(trainloader, epoch, net, flow, criterion, optimizer)
+    test(testloader, epoch, net, flow, criterion)
     scheduler.step()
 
 wandb.finish()
