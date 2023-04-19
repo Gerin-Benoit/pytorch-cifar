@@ -172,10 +172,13 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
                     gmm = distributions.MultivariateNormal(loc=loc, covariance_matrix=cov)
                     confidences.append(gmm_get_logits(gmm, fms[i]))
                 confidences = torch.stack(confidences)
-                
+
                 confidences = confidences - torch.min(confidences) + 1e-2
 
-                weighted_average_output = torch.mean(torch.sum(confidences*outputs, dim=0)/torch.sum(confidences, dim=0, keepdim=True), dim=0)
+                temperature = 5
+                confidences = F.softmax(confidences / temperature, dim=0)
+
+                weighted_average_output = torch.sum(confidences*outputs, dim=0)#torch.mean(torch.sum(confidences*outputs, dim=0)/torch.sum(confidences, dim=0, keepdim=True), dim=0)
 
                 wmean_loss = criterion(weighted_average_output, targets)
                 test_wmean_loss += wmean_loss.item()
