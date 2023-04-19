@@ -187,7 +187,7 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
 
                 weighted_average_output = torch.sum(confidences*outputs, dim=0)#torch.mean(torch.sum(confidences*outputs, dim=0)/torch.sum(confidences, dim=0, keepdim=True), dim=0)
 
-                print(weighted_average_output[:,0,:])
+                print((confidences*outputs)[:,0,:])
 
                 wmean_loss = criterion(weighted_average_output, targets)
                 test_wmean_loss += wmean_loss.item()
