@@ -30,11 +30,12 @@ parser = argparse.ArgumentParser(description='PyTorch CIFAR Training')
 parser.add_argument('--wandb_project', type=str, default='CIFAR10', help='wandb project name')
 #parser.add_argument('--name', default="idiot without a name", help='Wandb run name')
 
-parser.add_argument('--lr', default=1e-4, type=float, help='learning rate')
+parser.add_argument('--lr', default=1e-3, type=float, help='learning rate')
 parser.add_argument('--model_name', type = str, help='name of main model')
 parser.add_argument('--seed', default=1, type=int, help='set the random seed (should be the same as the model from path)')
 parser.add_argument('--num_workers', type=int, default=12, help='Number of workers')
 parser.add_argument('--norm_layer', default='batchnorm', help='norm layer to use : batchnorm or actnorm')
+parser.add_argument('--n_layers', type = int, default=3, help='number of layer for density estimator')
 
 args = parser.parse_args()
 
@@ -42,8 +43,8 @@ args = parser.parse_args()
 def neg_log_likelihood_2d(target, z, log_det):
     #log_likelihood_per_dim = target.log_prob(z) + log_det
     #return -log_likelihood_per_dim.mean()
-    
-    return 0.5*torch.sum(z**2, 1) - log_det
+    loss = 0.5*torch.sum(z**2, 1) - log_det
+    return loss
 
 seed = args.seed
 random.seed(seed)
@@ -139,22 +140,18 @@ flow = RealNVP(in_dim,
               size, 
               type)
 flow = flow.to(device)
-print('net')
-print(net)
-
-print('flow')
-print(flow)
 """
 """
 n_layers = 3
 flow = zuko.flows.MAF(in_dim, 0, transforms=n_layers, hidden_features=[dim] * n_layers)
 """
-n_layers = 3
+n_layers = args.n_layers
 # we define a subnet for use inside an affine coupling block
 # for more detailed information see the full tutorial
+dim = 2048
 def subnet_fc(dims_in, dims_out):
-    return nn.Sequential(nn.Linear(dims_in, 512), nn.ReLU(),
-                         nn.Linear(512,  dims_out))
+    return nn.Sequential(nn.Linear(dims_in, dim), nn.ReLU(),
+                         nn.Linear(dim,  dims_out))
 
 # a simple chain of operations is collected by ReversibleSequential
 flow = Ff.SequenceINN(in_dim)
@@ -162,17 +159,24 @@ for k in range(n_layers):
     flow.append(Fm.AllInOneBlock, subnet_constructor=subnet_fc)#, permute_soft=True)
     
 flow = flow.to(device)
+print('net')
+print(net)
+
+print('flow')
+print(flow)
+
 target = Normal(torch.tensor(0).float().cuda(), torch.tensor(1).float().cuda())
 
 criterion = neg_log_likelihood_2d
-optimizer = optim.SGD(flow.parameters(), lr=args.lr,
-                      momentum=0.9, weight_decay=5e-4)
-scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
+optimizer = optim.Adam(flow.parameters(), lr=args.lr,weight_decay=5e-4)
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30)
 
 
 wandb.login()
 project_name = 'flow_' + args.wandb_project
 wandb.init(project=project_name, entity='max_and_ben')
+
+wandb.config.update(args)
 
 model_name = 'flow_' + args.model_name
 
@@ -189,9 +193,8 @@ def train(loader, epoch, net, flow, criterion, optimizer):
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
         with torch.no_grad():
-            print(inputs.size())
             outputs, features = net.get_features(inputs)
-        print(features.size())
+
         #features = features.unsqueeze(-1).unsqueeze(-1)
         z, log_det = flow(features)
         loss = criterion(target, z, log_det)
@@ -272,7 +275,7 @@ def test(loader, epoch, net, flow, criterion):
         torch.save(state, './checkpoint/{}.pth'.format(model_name))
         best_loss = tot_loss
         
-for epoch in range(start_epoch, start_epoch + 200):
+for epoch in range(start_epoch, start_epoch + 30):
     train(trainloader, epoch, net, flow, criterion, optimizer)
     test(testloader, epoch, net, flow, criterion)
     scheduler.step()
