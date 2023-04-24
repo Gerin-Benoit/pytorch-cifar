@@ -33,6 +33,8 @@ parser.add_argument('--path_unconstrained_nets', nargs='+', type=str, required=T
                     help='list of paths to the unconstrained nets')
 
 parser.add_argument('--fix_statedict', action='store_true', default=False)
+parser.add_argument('--mod', action='store_true', default=False, help='use increased sensitivity: average pooling shortcut and leaky relu')
+
 args = parser.parse_args()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -84,7 +86,7 @@ for i, net_path in enumerate(args.path_unconstrained_nets):
 nets_constrained = []
 x = torch.rand((1, 3, 32, 32)).to(device)
 for i, net_path in enumerate(args.path_constrained_nets):
-    net = ResNet50(c=0, num_classes=num_classes, norm_layer=args.norm_layer, device=device)
+    net = ResNet50(c=0, num_classes=num_classes, norm_layer=args.norm_layer, device=device, mod=args.mod)
     net = net.to(device)
 
     with torch.no_grad():
