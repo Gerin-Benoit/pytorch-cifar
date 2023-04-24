@@ -231,7 +231,7 @@ def ResNet34():
     return ResNet(BasicBlock, [3, 4, 6, 3])
 
 
-def ResNet50(c=0, num_classes=10, norm_layer='batchnorm', device='cpu', mod=True):
+def ResNet50(c=0, num_classes=10, norm_layer='batchnorm', device='cpu', mod=False):
     return ResNet(Bottleneck, [3, 4, 6, 3], num_classes=num_classes,
                   norm=nn.BatchNorm2d if norm_layer == 'batchnorm' else ActNormLP2D, c=c, device=device, mod=mod)
 
