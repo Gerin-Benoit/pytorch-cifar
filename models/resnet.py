@@ -49,10 +49,28 @@ class ActNormLP2D(nn.Module):
         return x * torch.exp(log_scale) + self.shift()
 
 
+"""This block is from the DDU github, which uses average pooling shortcut and leaky relu to improve sensitivity"""
+class AvgPoolShortCut(nn.Module):
+    def __init__(self, stride, out_c, in_c):
+        super(AvgPoolShortCut, self).__init__()
+        self.stride = stride
+        self.out_c = out_c
+        self.in_c = in_c
+
+    def forward(self, x):
+        if x.shape[2] % 2 != 0:
+            x = F.avg_pool2d(x, 1, self.stride)
+        else:
+            x = F.avg_pool2d(x, self.stride, self.stride)
+        pad = torch.zeros(x.shape[0], self.out_c - self.in_c, x.shape[2], x.shape[3], device=x.device, )
+        x = torch.cat((x, pad), dim=1)
+        return x
+
+
 class BasicBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, in_planes, planes, stride=1, norm=nn.BatchNorm2d, c=0, shape=None):
+    def __init__(self, in_planes, planes, stride=1, norm=nn.BatchNorm2d, c=0, shape=None, mod=True):
         super(BasicBlock, self).__init__()
         self.conv1 = wrapper_spectral_norm(nn.Conv2d(
             in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False), kernel_size=3, c=c, shape=shape)
@@ -60,28 +78,33 @@ class BasicBlock(nn.Module):
         self.conv2 = wrapper_spectral_norm(nn.Conv2d(planes, planes, kernel_size=3,
                                                      stride=1, padding=1, bias=False), kernel_size=3, c=c, shape=shape)
         self.bn2 = norm(planes)
+        self.mod = mod
+        self.activation = F.leaky_relu if self.mod else F.relu
 
         self.shortcut = nn.Sequential()
         if stride != 1 or in_planes != self.expansion * planes:
-            self.shortcut = nn.Sequential(
-                wrapper_spectral_norm(nn.Conv2d(in_planes, self.expansion * planes,
-                                                kernel_size=1, stride=stride, bias=False), kernel_size=1, c=c,
-                                      shape=shape),
-                norm(self.expansion * planes)
-            )
+            if self.mod:
+                self.shortcut = nn.Sequential(AvgPoolShortCut(stride, self.expansion * planes, in_planes))
+            else:
+                self.shortcut = nn.Sequential(
+                    wrapper_spectral_norm(nn.Conv2d(in_planes, self.expansion * planes,
+                                                    kernel_size=1, stride=stride, bias=False), kernel_size=1, c=c,
+                                          shape=shape),
+                    norm(self.expansion * planes)
+                )
 
     def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)), inplace=True)
+        out = self.activation(self.bn1(self.conv1(x)), inplace=True)
         out = self.bn2(self.conv2(out))
         out += self.shortcut(x)
-        out = F.relu(out, inplace=True)
+        out = self.activation(out, inplace=True)
         return out
 
 
 class Bottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, in_planes, planes, stride=1, norm=nn.BatchNorm2d, c=0, shape=None):
+    def __init__(self, in_planes, planes, stride=1, norm=nn.BatchNorm2d, c=0, shape=None, mod=True):
         super(Bottleneck, self).__init__()
         self.conv1 = wrapper_spectral_norm(nn.Conv2d(in_planes, planes, kernel_size=1, bias=False), kernel_size=1, c=c,
                                            shape=shape)
@@ -97,34 +120,42 @@ class Bottleneck(nn.Module):
                                            shape=shape)
         self.bn3 = norm(self.expansion * planes)
 
+        self.mod = mod
+        self.activation = F.leaky_relu if self.mod else F.relu
+
         self.shortcut = nn.Sequential()
         if stride != 1 or in_planes != self.expansion * planes:
-            self.shortcut = nn.Sequential(
-                wrapper_spectral_norm(nn.Conv2d(in_planes, self.expansion * planes,
-                                                kernel_size=1, stride=stride, bias=False), kernel_size=1, c=c,
-                                      shape=shape),
-                norm(self.expansion * planes)
-            )
+            if self.mod:
+                self.shortcut = nn.Sequential(AvgPoolShortCut(stride, self.expansion * planes, in_planes))
+            else:
+                self.shortcut = nn.Sequential(
+                    wrapper_spectral_norm(nn.Conv2d(in_planes, self.expansion * planes,
+                                                    kernel_size=1, stride=stride, bias=False), kernel_size=1, c=c,
+                                          shape=shape),
+                    norm(self.expansion * planes)
+                )
 
     def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)), inplace=True)
+        out = self.activation(self.bn1(self.conv1(x)), inplace=True)
         # print('1', out.shape)
-        out = F.relu(self.bn2(self.conv2(out)), inplace=True)
+        out = self.activation(self.bn2(self.conv2(out)), inplace=True)
         # print('1', out.shape)
         out = self.bn3(self.conv3(out))
         # print('1', out.shape)
         out += self.shortcut(x)
         # print('1', out.shape)
-        out = F.relu(out, inplace=True)
+        out = self.activation(out, inplace=True)
         # print('1', out.shape)
         return out
 
 
 class ResNet(nn.Module):
-    def __init__(self, block, num_blocks, num_classes=10, norm=nn.BatchNorm2d, c=0, device='cpu'):
+    def __init__(self, block, num_blocks, num_classes=10, norm=nn.BatchNorm2d, c=0, device='cpu', mod=True):
         super(ResNet, self).__init__()
         img_size = (3, 32, 32)
         self.in_planes = 64
+        self.mod = mod
+        self.activation = F.leaky_relu if self.mod else F.relu
 
         self.conv1 = wrapper_spectral_norm(nn.Conv2d(3, 64, kernel_size=3,
                                                      stride=1, padding=1, bias=False), kernel_size=3, c=c,
@@ -147,12 +178,12 @@ class ResNet(nn.Module):
         strides = [stride] + [1] * (num_blocks - 1)
         layers = []
         for stride in strides:
-            layers.append(block(self.in_planes, planes, stride, norm=norm, c=c, shape=shape))
+            layers.append(block(self.in_planes, planes, stride, norm=norm, c=c, shape=shape, mod=self.mod))
             self.in_planes = planes * block.expansion
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)), inplace=True)
+        out = self.activation(self.bn1(self.conv1(x)), inplace=True)
         # print(out.shape)
         out = self.layer1(out)
         # print(out.shape)
@@ -200,9 +231,9 @@ def ResNet34():
     return ResNet(BasicBlock, [3, 4, 6, 3])
 
 
-def ResNet50(c=0, num_classes=10, norm_layer='batchnorm', device='cpu'):
+def ResNet50(c=0, num_classes=10, norm_layer='batchnorm', device='cpu', mod=True):
     return ResNet(Bottleneck, [3, 4, 6, 3], num_classes=num_classes,
-                  norm=nn.BatchNorm2d if norm_layer == 'batchnorm' else ActNormLP2D, c=c, device=device)
+                  norm=nn.BatchNorm2d if norm_layer == 'batchnorm' else ActNormLP2D, c=c, device=device, mod=mod)
 
 
 def ResNet101():
@@ -221,7 +252,6 @@ def test():
 
 def wrapper_spectral_norm(layer, kernel_size, c=0, shape=0):
     if c == 0:
-
         return layer
     if c > 0:
         print("COUCOU+")

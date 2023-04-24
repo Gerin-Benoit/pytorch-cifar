@@ -32,6 +32,8 @@ parser.add_argument('--num_workers', type=int, default=12, help='Number of worke
 parser.add_argument('--c', type=float, default=0, help='Lipschitz constant: 0 for no SN, positive for soft, negative '
                                                        'for hard')
 parser.add_argument('--norm_layer', default='batchnorm', help='norm layer to use : batchnorm or actnorm')
+
+parser.add_argument('--mod', action='store_true', default=False, help='use increased sensitivity: average pooling shortcut and leaky relu')
 args = parser.parse_args()
 
 seed = args.seed
@@ -107,7 +109,7 @@ if args.wandb_project == 'CIFAR10':
     num_classes = 10 
 elif args.wandb_project == 'CIFAR100':
     num_classes = 100
-net = ResNet50(c=args.c, num_classes=num_classes, norm_layer=args.norm_layer, device=device)
+net = ResNet50(c=args.c, num_classes=num_classes, norm_layer=args.norm_layer, device=device, mod=args.mod)
 net = net.to(device)
 print(net)
 """
@@ -140,6 +142,8 @@ elif args.c>0:
     model_name += '_soft_constrained_'
 else:
     model_name += '_hard_constrained_'
+if args.mod:
+    model_name += 'sens_'
 model_name += args.norm_layer + '_'
 model_name += str(args.seed)
 wandb.run.name = model_name
