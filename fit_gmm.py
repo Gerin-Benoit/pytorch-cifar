@@ -24,6 +24,7 @@ parser.add_argument('--batch_size_gmm', type=int, default=128, help='batch size 
 parser.add_argument('--c', type=float, default=0, help='Lipschitz constant: 0 for no SN, positive for soft, negative '
                                                        'for hard')
 parser.add_argument('--norm_layer', default='batchnorm', help='norm layer to use : batchnorm or actnorm')
+parser.add_argument('--mod', action='store_true', default=False, help='use increased sensitivity: average pooling shortcut and leaky relu')
 
 parser.add_argument('--fix_statedict', action='store_true', default=False)
 
@@ -88,10 +89,12 @@ elif args.c > 0:
     model_name += '_soft_constrained_'
 else:
     model_name += '_hard_constrained_'
+if args.mod:
+    model_name += 'sens_'
 model_name += args.norm_layer + '_'
 model_name += str(args.seed) + '_gmm.pth'
 
-net = ResNet50(c=0, num_classes=num_classes, norm_layer=args.norm_layer, device=device)
+net = ResNet50(c=0, num_classes=num_classes, norm_layer=args.norm_layer, device=device, mod=args.mod)
 
 net = net.to(device)
 if args.norm_layer == 'actnorm':
