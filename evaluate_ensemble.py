@@ -35,6 +35,8 @@ parser.add_argument('--path_unconstrained_nets', nargs='+', type=str, required=T
 parser.add_argument('--fix_statedict', action='store_true', default=False)
 parser.add_argument('--mod', action='store_true', default=False, help='use increased sensitivity: average pooling shortcut and leaky relu')
 
+parser.add_argument('--temp', type=float, default=1, help='temperature scaling')
+
 args = parser.parse_args()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -187,7 +189,7 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
                 #confidences = confidences - torch.min(confidences)
                 #confidences = confidences/torch.max(confidences)
 
-                temperature = 2
+                temperature = args.temp
                 confidences = F.softmax(confidences / temperature, dim=0)
 
                 weighted_average_output = torch.sum(confidences*outputs, dim=0)#torch.mean(torch.sum(confidences*outputs, dim=0)/torch.sum(confidences, dim=0, keepdim=True), dim=0)
