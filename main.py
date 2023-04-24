@@ -31,9 +31,11 @@ parser.add_argument('--num_workers', type=int, default=12, help='Number of worke
 
 parser.add_argument('--c', type=float, default=0, help='Lipschitz constant: 0 for no SN, positive for soft, negative '
                                                        'for hard')
-parser.add_argument('--norm_layer', default='batchnorm', help='norm layer to use : batchnorm or actnorm')
+parser.add_argument('--norm_layer', default='batchnorm', help='norm layer to use : batchnorm or actnorm or actnorm2')
 
 parser.add_argument('--mod', action='store_true', default=False, help='use increased sensitivity: average pooling shortcut and leaky relu')
+
+parser.add_argument('--fc_sn', action='store_true', default=False, help='apply SN on the last model MLP')
 args = parser.parse_args()
 
 seed = args.seed
@@ -144,6 +146,8 @@ else:
     model_name += '_hard_constrained_'
 if args.mod:
     model_name += 'sens_'
+if args.fc_sn:
+    model_name += 'fcsn_'
 model_name += args.norm_layer + '_'
 model_name += str(args.seed)
 wandb.run.name = model_name
@@ -215,6 +219,10 @@ def test(epoch, net, criterion):
             elif args.c<0:
                 try:
                     remove_spectral_norm_conv(p)
+                except:
+                    pass
+                try:
+                    remove_spectral_norm(p)
                 except:
                     pass
             else:

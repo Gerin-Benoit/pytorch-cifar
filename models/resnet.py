@@ -49,7 +49,44 @@ class ActNormLP2D(nn.Module):
         return x * torch.exp(log_scale) + self.shift()
 
 
+class ActNormLP2D_else(nn.Module):
+    def __init__(self, num_channels):
+        super(ActNormLP2D_else, self).__init__()
+        self.num_channels = num_channels
+        self._scale = Parameter(torch.zeros(num_channels))  # Tensor not zeros
+        self._shift = Parameter(torch.zeros(num_channels))
+        self._init = False
+        self.eps = 1e-6
+
+    def scale(self):
+        return self._scale[None, :, None, None]
+
+    def shift(self):
+        return self._shift[None, :, None, None]
+
+    def forward(self, x):
+        if not self._init:
+            with torch.no_grad():
+                # initialize params to input stats
+                assert self.num_channels == x.size(1)
+
+                mean = torch.transpose(x, 0, 1).contiguous().view(self.num_channels, -1).mean(dim=1, keepdim=False)
+                zero_mean = x - mean[None, :, None, None]
+                var = torch.transpose(zero_mean ** 2, 0, 1).contiguous().view(self.num_channels, -1).mean(dim=1)
+                std = (var + self.eps) ** .5
+                scale = 1. / std
+                scale = torch.clamp(scale, -1, 1)
+                self._scale.data = scale
+                self._shift.data = - mean * scale
+                self._init = True
+
+        scale = self.scale()
+        return x * scale + self.shift()
+
+
 """This block is from the DDU github, which uses average pooling shortcut and leaky relu to improve sensitivity"""
+
+
 class AvgPoolShortCut(nn.Module):
     def __init__(self, stride, out_c, in_c):
         super(AvgPoolShortCut, self).__init__()
@@ -150,11 +187,13 @@ class Bottleneck(nn.Module):
 
 
 class ResNet(nn.Module):
-    def __init__(self, block, num_blocks, num_classes=10, norm=nn.BatchNorm2d, c=0, device='cpu', mod=True):
+    def __init__(self, block, num_blocks, num_classes=10, norm=nn.BatchNorm2d, c=0, device='cpu', mod=False,
+                 fc_sn=False):
         super(ResNet, self).__init__()
         img_size = (3, 32, 32)
         self.in_planes = 64
         self.mod = mod
+        self.fc_sn = fc_sn
         self.activation = F.leaky_relu if self.mod else F.relu
 
         self.conv1 = wrapper_spectral_norm(nn.Conv2d(3, 64, kernel_size=3,
@@ -169,7 +208,11 @@ class ResNet(nn.Module):
         self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2, norm=norm, c=c, shape=shape)
         shape = (512, 8, 8)
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2, norm=norm, c=c, shape=shape)
-        self.linear = nn.Linear(512 * block.expansion, num_classes)
+        if self.fc_sn:
+            self.linear = spectral_norm_fc(nn.Linear(512 * block.expansion, num_classes), 1,
+                                           n_power_iterations=1)
+        else:
+            self.linear = nn.Linear(512 * block.expansion, num_classes)
 
         self.device = device
         self.smoothness = torch.tensor(c).to(self.device)
@@ -221,6 +264,8 @@ class ResNet(nn.Module):
             for name, p in self.named_parameters():
                 if "_log_scale" in name:
                     p.data.clamp_(None, torch.log(c))
+                elif "_scale" in name:
+                    p.data.clamp_(-c, c)
 
 
 def ResNet18():
@@ -231,9 +276,10 @@ def ResNet34():
     return ResNet(BasicBlock, [3, 4, 6, 3])
 
 
-def ResNet50(c=0, num_classes=10, norm_layer='batchnorm', device='cpu', mod=False):
+def ResNet50(c=0, num_classes=10, norm_layer='batchnorm', device='cpu', mod=False, fc_sn=False):
+    norm = nn.BatchNorm2d if norm_layer == 'batchnorm' else ActNormLP2D_else if norm_layer == 'actnorm_2' else ActNormLP2D
     return ResNet(Bottleneck, [3, 4, 6, 3], num_classes=num_classes,
-                  norm=nn.BatchNorm2d if norm_layer == 'batchnorm' else ActNormLP2D, c=c, device=device, mod=mod)
+                  norm=norm, c=c, device=device, mod=mod, fc_sn=fc_sn)
 
 
 def ResNet101():
@@ -254,12 +300,10 @@ def wrapper_spectral_norm(layer, kernel_size, c=0, shape=0):
     if c == 0:
         return layer
     if c > 0:
-        print("COUCOU+")
         return spectral_norm_fc(layer, c,
                                 n_power_iterations=1)
 
     if c < 0:
-        print("COUCOU-")
         if kernel_size == 1:
             # use spectral norm fc, because bound are tight for 1x convolutions
             return spectral_norm_fc(layer, -c,
