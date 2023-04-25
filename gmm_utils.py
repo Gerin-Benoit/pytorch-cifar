@@ -2,7 +2,6 @@
 From the GitHub https://github.com/omegafragger/DDU/blob/main/utils/gmm_utils.py
 """
 
-
 import torch
 from torch import nn
 from tqdm import tqdm
@@ -18,7 +17,7 @@ def centered_cov_torch(x):
 
 
 def get_embeddings(
-    net, loader: torch.utils.data.DataLoader, num_dim: int, dtype, device, storage_device,
+        net, loader: torch.utils.data.DataLoader, num_dim: int, dtype, device, storage_device,
 ):
     num_samples = len(loader.dataset)
     embeddings = torch.empty((num_samples, num_dim), dtype=dtype, device=storage_device)
@@ -44,7 +43,6 @@ def get_embeddings(
 
 
 def gmm_forward(net, gaussians_model, data_B_X):
-
     if isinstance(net, nn.DataParallel):
         features_B_Z = net.module(data_B_X)
         features_B_Z = net.module.feature
@@ -58,7 +56,6 @@ def gmm_forward(net, gaussians_model, data_B_X):
 
 
 def gmm_evaluate(net, gaussians_model, loader, device, num_classes, storage_device):
-
     num_samples = len(loader.dataset)
     logits_N_C = torch.empty((num_samples, num_classes), dtype=torch.float, device=storage_device)
     labels_N = torch.empty(num_samples, dtype=torch.int, device=storage_device)
@@ -80,23 +77,26 @@ def gmm_evaluate(net, gaussians_model, loader, device, num_classes, storage_devi
 
 
 def gmm_get_logits(gmm, embeddings):
-
     log_probs_B_Y = gmm.log_prob(embeddings[:, None, :])
     return log_probs_B_Y
 
+
 def gmm_get_logits_given_class(loc, cov, embeddings, classes):
-    print(embeddings.shape)
+    B, C = embeddings.shape[0], loc.shape[0]
+    output = torch.zeros(B, C).to(embeddings.device)
 
-    output = torch.zeros()
-
-    for c in range(loc.shape[0]):
+    for c in range(C):
         index_c = classes == c
-        x_cond_c = embeddings[index_c]
-        N_c = torch.distributions.MultivariateNormal(loc=loc[c].to(embeddings.device), covariance_matrix=cov[c].to(embeddings.device))
+        if torch.numel(index_c) > 0:
+            x_cond_c = embeddings[index_c]
+            N_c = torch.distributions.MultivariateNormal(loc=loc[c].to(embeddings.device),
+                                                         covariance_matrix=cov[c].to(embeddings.device))
 
-        log_prob_x_c = N_c.log_prob(x_cond_c)
+            log_prob_x_c = N_c.log_prob(x_cond_c)
+            output[index_c] = log_prob_x_c
 
-    #log_probs_B_Y = gmm.log_prob(embeddings[:, None, :])
+    # log_probs_B_Y = gmm.log_prob(embeddings[:, None, :])
+    print(output)
     return output
 
 
@@ -130,7 +130,5 @@ def gmm_fit(embeddings, labels, num_classes):
                 if "The parameter covariance_matrix has invalid values" in str(e):
                     print("invalid", jitter_eps)
                     continue
-
-
 
     return gmm, jitter_eps
