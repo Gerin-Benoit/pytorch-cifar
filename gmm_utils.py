@@ -84,6 +84,21 @@ def gmm_get_logits(gmm, embeddings):
     log_probs_B_Y = gmm.log_prob(embeddings[:, None, :])
     return log_probs_B_Y
 
+def gmm_get_logits_given_class(loc, cov, embeddings, classes):
+    print(embeddings.shape)
+
+    output = torch.zeros()
+
+    for c in range(loc.shape[0]):
+        index_c = classes == c
+        x_cond_c = embeddings[index_c]
+        N_c = torch.distributions.MultivariateNormal(loc=loc[c].to(embeddings.device), covariance_matrix=cov[c].to(embeddings.device))
+
+        log_prob_x_c = N_c.log_prob(x_cond_c)
+
+    #log_probs_B_Y = gmm.log_prob(embeddings[:, None, :])
+    return output
+
 
 def gmm_fit(embeddings, labels, num_classes):
     with torch.no_grad():
