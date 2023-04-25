@@ -194,7 +194,6 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
 
                 temperature = args.temp
                 confidences = F.softmax(confidences / temperature, dim=0)
-
                 weighted_average_output = torch.sum(confidences*outputs, dim=0)#torch.mean(torch.sum(confidences*outputs, dim=0)/torch.sum(confidences, dim=0, keepdim=True), dim=0)
 
                 '''
@@ -226,7 +225,6 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
     for net in nets:
         net = net.to('cpu')
         
-    return 100. * correct_mean / total, 100. * correct_wmean / total
 
 
 
@@ -234,7 +232,7 @@ evaluate(testloader, nets_unconstrained)
 evaluate(testloader, nets_constrained, gmms_loc, gmms_cov)
 
 if args.data_aug == 'blurring':
-    for sigma in [0.1, 0.5, 1.0, 1.5, 2.0, 3.0, 5.0, 10.0]:
+    for sigma in [1.0, 3.0, 5.0, 10.0]:
         transform_test = transforms.Compose([
             transforms.GaussianBlur(kernel_size=3, sigma=(sigma, sigma)),
             transforms.ToTensor(),
@@ -258,8 +256,8 @@ if args.data_aug == 'blurring':
         else:
             print(f"Invalid dataset name. Expect CIFAR10 or CIFAR100, but got {args.dataset_name}")
             exit(-1)
-    print('SIGMA:', sigma)
-    acc, acc_w = evaluate(testloader, nets_unconstrained, domain_shift = args.data_aug)
-    acc, acc_w = evaluate(testloader, nets_constrained, gmms_loc, gmms_cov, domain_shift = args.data_aug)
-    
+        print('SIGMA:', sigma)
+        evaluate(testloader, nets_unconstrained, domain_shift = args.data_aug)
+        evaluate(testloader, nets_constrained, gmms_loc, gmms_cov, domain_shift = args.data_aug)
+        
         
