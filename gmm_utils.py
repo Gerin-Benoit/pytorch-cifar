@@ -84,6 +84,7 @@ def gmm_get_logits(gmm, embeddings):
 def gmm_get_logits_given_class(loc, cov, embeddings, classes):
     B, C = embeddings.shape[0], loc.shape[0]
     output = torch.zeros(B).to(embeddings.device)
+    print(loc.shape,cov.shape)
 
     for c in range(C):
         index_c = classes == c
