@@ -33,6 +33,12 @@ parser.add_argument('--path_unconstrained_nets', nargs='+', type=str, required=T
                     help='list of paths to the unconstrained nets')
 
 parser.add_argument('--fix_statedict', action='store_true', default=False)
+parser.add_argument('--mod', action='store_true', default=False, help='use increased sensitivity: average pooling shortcut and leaky relu')
+
+parser.add_argument('--temp', type=float, default=1, help='temperature scaling')
+
+parser.add_argument('--data_aug', type=str, default='blurring', help='data augmentation for domain shift')
+
 args = parser.parse_args()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -53,6 +59,7 @@ if args.dataset_name == 'CIFAR10':
         root='./data', train=False, download=True, transform=transform_test)
     testloader = torch.utils.data.DataLoader(
         testset, batch_size=100, shuffle=False, num_workers=args.num_workers)
+        
 
 elif args.dataset_name == 'CIFAR100':
     num_classes = 100
@@ -84,7 +91,7 @@ for i, net_path in enumerate(args.path_unconstrained_nets):
 nets_constrained = []
 x = torch.rand((1, 3, 32, 32)).to(device)
 for i, net_path in enumerate(args.path_constrained_nets):
-    net = ResNet50(c=0, num_classes=num_classes, norm_layer=args.norm_layer, device=device)
+    net = ResNet50(c=0, num_classes=num_classes, norm_layer=args.norm_layer, device=device, mod=args.mod)
     net = net.to(device)
 
     with torch.no_grad():
@@ -116,7 +123,7 @@ if device == 'cuda':
 criterion = nn.NLLLoss()
 
 
-def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
+def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None):
     for net in nets:
         net.eval()
         net.to(device)
@@ -185,10 +192,10 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
                 #confidences = confidences - torch.min(confidences)
                 #confidences = confidences/torch.max(confidences)
 
-                temperature = 10e6
+
+                temperature = args.temp
 
                 confidences = F.softmax(confidences / temperature, dim=0)
-
                 weighted_average_output = torch.sum(confidences*outputs, dim=0)#torch.mean(torch.sum(confidences*outputs, dim=0)/torch.sum(confidences, dim=0, keepdim=True), dim=0)
 
                 '''
@@ -219,8 +226,42 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
 
     for net in nets:
         net = net.to('cpu')
+        
 
 
 
 evaluate(testloader, nets_unconstrained)
 evaluate(testloader, nets_constrained, gmms_loc, gmms_cov)
+
+if args.data_aug == 'blurring':
+    for sigma in [1.0, 3.0, 5.0, 10.0]:
+        transform_test = transforms.Compose([
+            transforms.GaussianBlur(kernel_size=3, sigma=(sigma, sigma)),
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ])
+        if args.dataset_name == 'CIFAR10':
+            testset = torchvision.datasets.CIFAR10(
+                root='./data', train=False, download=True, transform=transform_test)
+            testloader = torch.utils.data.DataLoader(
+                testset, batch_size=100, shuffle=False, num_workers=args.num_workers)
+                
+        elif args.dataset_name == 'CIFAR100':
+            num_classes = 100
+            classes = ...
+
+            testset = torchvision.datasets.CIFAR100(
+                root='./data', train=False, download=True, transform=transform_test)
+            testloader = torch.utils.data.DataLoader(
+                testset, batch_size=100, shuffle=False, num_workers=args.num_workers)
+
+        else:
+            print(f"Invalid dataset name. Expect CIFAR10 or CIFAR100, but got {args.dataset_name}")
+            exit(-1)
+        print('---------------')
+        print('SIGMA:', sigma)
+        evaluate(testloader, nets_unconstrained, domain_shift = args.data_aug)
+        evaluate(testloader, nets_constrained, gmms_loc, gmms_cov, domain_shift = args.data_aug)
+        print('---------------')
+        
+        
