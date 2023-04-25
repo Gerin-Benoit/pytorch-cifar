@@ -256,8 +256,10 @@ if args.data_aug == 'blurring':
         else:
             print(f"Invalid dataset name. Expect CIFAR10 or CIFAR100, but got {args.dataset_name}")
             exit(-1)
+        print('---------------')
         print('SIGMA:', sigma)
         evaluate(testloader, nets_unconstrained, domain_shift = args.data_aug)
         evaluate(testloader, nets_constrained, gmms_loc, gmms_cov, domain_shift = args.data_aug)
+        print('---------------')
         
         
