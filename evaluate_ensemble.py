@@ -189,8 +189,9 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
                     #print(outputs.shape)
                     cls = torch.argmax(outputs[i], dim=1)
                     #print(cls, cls.shape)
-                    out = gmm_get_logits_given_class(loc, cov, fms[i], cls)
+                    #out = gmm_get_logits_given_class(loc, cov, fms[i], cls)
                     gmm = distributions.MultivariateNormal(loc=loc, covariance_matrix=cov)
+                    print('COUCPO')
                     confidences.append(gmm_get_logits(gmm, fms[i]))
                 confidences = torch.stack(confidences)
 
