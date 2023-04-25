@@ -186,7 +186,7 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
                 correct_mean += predicted.eq(targets).sum().item()
 
                 for i, (loc, cov) in enumerate(zip(gmms_loc, gmms_cov)):
-                    cls = torch.argmax(outputs[i], dim=0)
+                    cls = torch.argmax(outputs[i,:,1], dim=0)
                     print(cls, cls.shape)
                     out = gmm_get_logits_given_class(loc, cov, fms[i], cls)
                     gmm = distributions.MultivariateNormal(loc=loc, covariance_matrix=cov)
