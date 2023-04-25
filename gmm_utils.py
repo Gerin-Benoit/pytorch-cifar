@@ -88,7 +88,7 @@ def gmm_get_logits_given_class(loc, cov, embeddings, classes):
     for c in range(C):
         index_c = classes == c
         if torch.numel(index_c) > 0:
-            x_cond_c = embeddings[index_c]
+            x_cond_c = embeddings[index_c, :]
             N_c = torch.distributions.MultivariateNormal(loc=loc[c].to(embeddings.device),
                                                          covariance_matrix=cov[c].to(embeddings.device))
 
