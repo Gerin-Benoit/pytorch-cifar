@@ -37,6 +37,8 @@ parser.add_argument('--mod', action='store_true', default=False, help='use incre
 
 parser.add_argument('--temp', type=float, default=1, help='temperature scaling')
 
+parser.add_argument('--data_aug', type=str, default='blurring', help='data augmentation for domain shift')
+
 args = parser.parse_args()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -57,6 +59,7 @@ if args.dataset_name == 'CIFAR10':
         root='./data', train=False, download=True, transform=transform_test)
     testloader = torch.utils.data.DataLoader(
         testset, batch_size=100, shuffle=False, num_workers=args.num_workers)
+        
 
 elif args.dataset_name == 'CIFAR100':
     num_classes = 100
@@ -120,7 +123,7 @@ if device == 'cuda':
 criterion = nn.NLLLoss()
 
 
-def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
+def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None):
     for net in nets:
         net.eval()
         net.to(device)
@@ -222,8 +225,41 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None):
 
     for net in nets:
         net = net.to('cpu')
+        
+    return 100. * correct_mean / total, 100. * correct_wmean / total
 
 
 
 evaluate(testloader, nets_unconstrained)
 evaluate(testloader, nets_constrained, gmms_loc, gmms_cov)
+
+if args.data_aug == 'blurring':
+    for sigma in [0.1, 0.5, 1.0, 1.5, 2.0, 3.0, 5.0, 10.0]:
+        transform_test = transforms.Compose([
+            transforms.GaussianBlur(kernel_size=3, sigma=(sigma, sigma)),
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ])
+        if args.dataset_name == 'CIFAR10':
+            testset = torchvision.datasets.CIFAR10(
+                root='./data', train=False, download=True, transform=transform_test)
+            testloader = torch.utils.data.DataLoader(
+                testset, batch_size=100, shuffle=False, num_workers=args.num_workers)
+                
+        elif args.dataset_name == 'CIFAR100':
+            num_classes = 100
+            classes = ...
+
+            testset = torchvision.datasets.CIFAR100(
+                root='./data', train=False, download=True, transform=transform_test)
+            testloader = torch.utils.data.DataLoader(
+                testset, batch_size=100, shuffle=False, num_workers=args.num_workers)
+
+        else:
+            print(f"Invalid dataset name. Expect CIFAR10 or CIFAR100, but got {args.dataset_name}")
+            exit(-1)
+    print('SIGMA:', sigma)
+    acc, acc_w = evaluate(testloader, nets_unconstrained, domain_shift = args.data_aug)
+    acc, acc_w = evaluate(testloader, nets_constrained, gmms_loc, gmms_cov, domain_shift = args.data_aug)
+    
+        
