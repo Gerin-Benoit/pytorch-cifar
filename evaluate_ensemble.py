@@ -230,9 +230,9 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
         
 
 
-
-evaluate(testloader, nets_unconstrained)
 evaluate(testloader, nets_constrained, gmms_loc, gmms_cov)
+evaluate(testloader, nets_unconstrained)
+
 
 if args.data_aug == 'blurring':
     for sigma in [1.0, 3.0, 5.0, 10.0]:
