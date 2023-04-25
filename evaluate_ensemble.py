@@ -233,9 +233,9 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
         net = net.to('cpu')
         
 
-
-evaluate(testloader, nets_constrained, gmms_loc, gmms_cov)
 evaluate(testloader, nets_unconstrained)
+evaluate(testloader, nets_constrained, gmms_loc, gmms_cov)
+
 
 
 if args.data_aug == 'blurring':
