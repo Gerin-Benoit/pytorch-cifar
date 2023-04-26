@@ -200,17 +200,17 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
                 #confidences = confidences/torch.amax(confidences, dim=0,keepdim=True)
                 #confidences = confidences / torch.amax(confidences, dim=(0,2), keepdim=True)
 
-                max_log_weights, _ = torch.max(confidences, dim=2, keepdim=True)
+                max_log_weights, _ = torch.max(confidences, dim=0, keepdim=True)
 
                 # Subtract the max_log_weights from log_weights, exponentiate, and multiply with outputs
                 weighted_outputs = outputs * torch.exp(confidences - max_log_weights)
 
                 # Compute the sum of weighted_outputs along the last axis
-                sum_weighted_outputs = torch.sum(weighted_outputs, dim=2, keepdim=True)
+                sum_weighted_outputs = torch.sum(weighted_outputs, dim=0, keepdim=True)
 
                 # Compute the sum of exponentiated log_weights along the last axis using the logsumexp trick
                 sum_exp_log_weights = max_log_weights + torch.log(
-                    torch.sum(torch.exp(confidences - max_log_weights), dim=2, keepdim=True))
+                    torch.sum(torch.exp(confidences - max_log_weights), dim=0))
 
                 # Compute the mean of outputs averaged by log_weights
                 weighted_average_output = sum_weighted_outputs / sum_exp_log_weights
