@@ -199,8 +199,12 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
                 confidences = confidences - torch.amin(confidences, dim=(0,2), keepdim=True)
                 #confidences = confidences/torch.amax(confidences, dim=0,keepdim=True)
                 confidences = confidences / torch.amax(confidences, dim=(0,2), keepdim=True)
+
+                max_outputs = torch.amax(outputs, dim=2, keepdim=True)
+
+                th_outputs = torch.where(outputs==max_outputs,1,0).float()
                 print("-"*20)
-                print("output:", outputs[0, 0])
+                print("th_output:", th_outputs[0, 0])
                 print("confidence:", confidences[0,0])
 
 
