@@ -200,24 +200,24 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
                 #confidences = confidences/torch.amax(confidences, dim=0,keepdim=True)
                 #confidences = confidences / torch.amax(confidences, dim=(0,2), keepdim=True)
 
+                # Compute the max log_weights along the axis M
                 max_log_weights, _ = torch.max(confidences, dim=0, keepdim=True)
 
                 # Compute the sum of exponentiated log_weights along the axis M using the logsumexp trick
                 sum_exp_log_weights = max_log_weights + torch.log(
-                    torch.sum(torch.exp(confidences - max_log_weights), dim=0))
+                    torch.sum(torch.exp(confidences - max_log_weights), dim=0, keepdim=True))
 
                 # Normalize log_weights so they sum to 1 in the natural scale
                 normalized_log_weights = confidences - sum_exp_log_weights
 
                 # Subtract the max_log_weights from normalized_log_weights, exponentiate, and multiply with outputs
-                weighted_outputs = outputs * torch.exp(normalized_log_weights - max_log_weights)
+                weighted_outputs = outputs * torch.exp(normalized_log_weights)
 
                 # Compute the sum of weighted_outputs along the axis M
                 sum_weighted_outputs = torch.sum(weighted_outputs, dim=0)
 
                 # Compute the mean of outputs averaged by normalized log_weights
-                weighted_average_output = sum_weighted_outputs / torch.exp(
-                    torch.log(torch.sum(torch.exp(normalized_log_weights - max_log_weights), dim=0)))
+                weighted_average_output = sum_weighted_outputs
 
                 weighted_average_output = weighted_average_output.squeeze()
                 print(weighted_average_output[0,:])
