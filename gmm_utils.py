@@ -78,6 +78,8 @@ def gmm_evaluate(net, gaussians_model, loader, device, num_classes, storage_devi
 
 def gmm_get_logits(gmm, embeddings):
     log_probs_B_Y = gmm.log_prob(embeddings[:, None, :])
+    print(log_probs_B_Y.shape)
+    exit()
     return log_probs_B_Y
 
 
@@ -90,8 +92,8 @@ def gmm_get_logits_given_class(loc, cov, embeddings, classes):
         index_c = classes == c
         if torch.numel(index_c) > 0:
             x_cond_c = embeddings[index_c, :]
-            N_c = torch.distributions.MultivariateNormal(loc=loc[c].to(embeddings.device),
-                                                         covariance_matrix=cov[c].T.to(embeddings.device))
+            N_c = torch.distributions.MultivariateNormal(loc=loc[c].float().to(embeddings.device),
+                                                         covariance_matrix=cov[c].float().to(embeddings.device))
 
             log_prob_x_c = N_c.log_prob(x_cond_c)
             output[index_c] = log_prob_x_c
