@@ -195,14 +195,16 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
                     #confidences.append(gmm_get_logits(gmm, fms[i]))
                 confidences = torch.stack(confidences)
 
-                #confidences = confidences - torch.min(confidences)
+                confidences = confidences - torch.min(confidences)
                 #confidences = confidences/torch.max(confidences)
 
 
                 temperature = args.temp
 
-                confidences = F.softmax(confidences / temperature, dim=0)
-                weighted_average_output = torch.sum(confidences*outputs, dim=0)#torch.mean(torch.sum(confidences*outputs, dim=0)/torch.sum(confidences, dim=0, keepdim=True), dim=0)
+                #confidences = F.softmax(confidences / temperature, dim=0)
+                confidences = confidences.repeat(1,1,num_classes)
+                weighted_average_output = torch.mean(torch.sum(confidences * outputs, dim=0) / torch.sum(confidences, dim=0, keepdim=True), dim=0)
+                #weighted_average_output = torch.sum(confidences*outputs, dim=0)#torch.mean(torch.sum(confidences*outputs, dim=0)/torch.sum(confidences, dim=0, keepdim=True), dim=0)
 
                 '''
                 print('-'*20)
