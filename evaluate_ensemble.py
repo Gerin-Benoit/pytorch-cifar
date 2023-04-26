@@ -196,7 +196,7 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
                 confidences = torch.stack(confidences)
 
                 confidences = confidences - torch.min(confidences)
-                #confidences = confidences/torch.max(confidences)
+                confidences = confidences/torch.max(confidences)
 
 
                 temperature = args.temp

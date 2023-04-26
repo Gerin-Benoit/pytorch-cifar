@@ -94,6 +94,7 @@ if args.mod:
     model_name += 'sens_'
 if args.fc_sn:
     model_name += 'fcsn_'
+
 model_name += args.norm_layer + '_'
 model_name += str(args.seed) + '_gmm.pth'
 
