@@ -196,17 +196,24 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
                 confidences = torch.stack(confidences)
 
                 #confidences = confidences - torch.amin(confidences, dim=0,keepdim=True)
-                confidences = confidences - torch.amin(confidences, dim=(0,1,2), keepdim=True)
+                #confidences = confidences - torch.amin(confidences, dim=(0,1,2), keepdim=True)
                 #confidences = confidences/torch.amax(confidences, dim=0,keepdim=True)
                 #confidences = confidences / torch.amax(confidences, dim=(0,2), keepdim=True)
 
-                n = 5
-                sorted_outputs, indices = torch.sort(outputs, dim=2, descending=True)
-                top_n_values = sorted_outputs[:, :, :n]  # Shape: (M, B, n)
-                mask = torch.zeros_like(outputs)
-                mask.scatter_(dim=2, index=indices[:, :, :n], value=1)
-                th_outputs = mask * outputs
-                #max_outputs = torch.amax(outputs, dim=2, keepdim=True)
+                max_log_weights, _ = torch.max(confidences, dim=2, keepdim=True)
+
+                # Subtract the max_log_weights from log_weights, exponentiate, and multiply with outputs
+                weighted_outputs = outputs * torch.exp(confidences - max_log_weights)
+
+                # Compute the sum of weighted_outputs along the last axis
+                sum_weighted_outputs = torch.sum(weighted_outputs, dim=2, keepdim=True)
+
+                # Compute the sum of exponentiated log_weights along the last axis using the logsumexp trick
+                sum_exp_log_weights = max_log_weights + torch.log(
+                    torch.sum(torch.exp(confidences - max_log_weights), dim=2, keepdim=True))
+
+                # Compute the mean of outputs averaged by log_weights
+                weighted_average_output = sum_weighted_outputs / sum_exp_log_weights
 
                 #th_outputs = torch.where(outputs==max_outputs,1,0).float()
                 #print("-"*20)
@@ -220,7 +227,7 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
                 #print(confidences.shape)
                 #confidences = confidences.unsqueeze(2).repeat(1,1,num_classes)
                 #print(confidences.shape)
-                weighted_average_output = torch.mean(torch.sum(confidences * th_outputs, dim=0) / torch.sum(confidences, dim=0, keepdim=True), dim=0)
+                #weighted_average_output = torch.mean(torch.sum(confidences * outputs, dim=0) / torch.sum(confidences, dim=0, keepdim=True), dim=0)
                 #weighted_average_output = torch.sum(confidences*outputs, dim=0)#torch.mean(torch.sum(confidences*outputs, dim=0)/torch.sum(confidences, dim=0, keepdim=True), dim=0)
 
                 '''
