@@ -200,9 +200,15 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
                 #confidences = confidences/torch.amax(confidences, dim=0,keepdim=True)
                 confidences = confidences / torch.amax(confidences, dim=(0,2), keepdim=True)
 
-                max_outputs = torch.amax(outputs, dim=2, keepdim=True)
+                n = 1
+                sorted_outputs, indices = torch.sort(outputs, dim=2, descending=True)
+                top_n_values = sorted_outputs[:, :, :n]  # Shape: (M, B, n)
+                mask = torch.zeros_like(outputs)
+                mask.scatter_(dim=2, index=indices[:, :, :n], value=1)
+                th_outputs = mask
+                #max_outputs = torch.amax(outputs, dim=2, keepdim=True)
 
-                th_outputs = torch.where(outputs==max_outputs,outputs,0).float()
+                #th_outputs = torch.where(outputs==max_outputs,1,0).float()
                 #print("-"*20)
                 #print("th_output:", th_outputs[0, 0])
                 #print("confidence:", confidences[0,0])
