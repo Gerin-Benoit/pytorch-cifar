@@ -196,9 +196,9 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
                 confidences = torch.stack(confidences)
 
                 #confidences = confidences - torch.amin(confidences, dim=0,keepdim=True)
-                confidences = confidences - torch.amin(confidences, dim=(0,2), keepdim=True)
+                confidences = confidences - torch.amin(confidences, dim=(0,1,2), keepdim=True)
                 #confidences = confidences/torch.amax(confidences, dim=0,keepdim=True)
-                confidences = confidences / torch.amax(confidences, dim=(0,2), keepdim=True)
+                #confidences = confidences / torch.amax(confidences, dim=(0,2), keepdim=True)
 
                 n = 5
                 sorted_outputs, indices = torch.sort(outputs, dim=2, descending=True)
