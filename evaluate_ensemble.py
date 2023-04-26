@@ -222,7 +222,7 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
                 weighted_average_output = sum_weighted_outputs
 
                 weighted_average_output = weighted_average_output.squeeze()
-                print(weighted_average_output[0,:])
+                #print(weighted_average_output[0,:])
 
                 #th_outputs = torch.where(outputs==max_outputs,1,0).float()
                 #print("-"*20)
