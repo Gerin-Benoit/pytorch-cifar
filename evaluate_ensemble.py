@@ -170,7 +170,7 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
                 confidences = []
                 for net in nets:
                     output, fm = net.get_features(inputs)
-                    outputs_raw.append(output.deach())
+                    outputs_raw.append(output.detach())
                     output = F.softmax(output, dim=-1)
                     outputs.append(output)
                     fms.append(fm)#.to('cpu'))
