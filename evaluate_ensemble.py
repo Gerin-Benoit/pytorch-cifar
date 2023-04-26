@@ -202,7 +202,7 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
 
                 max_outputs = torch.amax(outputs, dim=2, keepdim=True)
 
-                th_outputs = torch.where(outputs==max_outputs,1,0).float()
+                th_outputs = torch.where(outputs==max_outputs,outputs,0).float()
                 print("-"*20)
                 print("th_output:", th_outputs[0, 0])
                 print("confidence:", confidences[0,0])
