@@ -165,16 +165,18 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
             for batch_idx, (inputs, targets) in enumerate(testloader):
                 inputs, targets = inputs.to(device), targets.to(device)
                 outputs = []
+                outputs_raw = []
                 fms = []
                 confidences = []
                 for net in nets:
                     output, fm = net.get_features(inputs)
+                    outputs_raw.append(output.deach())
                     output = F.softmax(output, dim=-1)
                     outputs.append(output)
                     fms.append(fm)#.to('cpu'))
 
                 outputs = torch.stack(outputs)
-
+                outputs_raw = torch.stack(outputs_raw)
                 #outputs[outputs>=0.5]=1
                 #outputs[outputs<0.5]=0
                 average_output = torch.mean(outputs, dim=0)
@@ -211,7 +213,7 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
                 normalized_log_weights = confidences - sum_exp_log_weights
 
                 # Subtract the max_log_weights from normalized_log_weights, exponentiate, and multiply with outputs
-                weighted_outputs = outputs * torch.exp(normalized_log_weights)
+                weighted_outputs = outputs_raw * torch.exp(normalized_log_weights)
 
                 # Compute the sum of weighted_outputs along the axis M
                 sum_weighted_outputs = torch.sum(weighted_outputs, dim=0)
