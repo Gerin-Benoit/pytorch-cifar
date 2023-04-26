@@ -214,6 +214,7 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
 
                 # Compute the mean of outputs averaged by log_weights
                 weighted_average_output = sum_weighted_outputs / sum_exp_log_weights
+                print(weighted_average_output.shape)
 
                 #th_outputs = torch.where(outputs==max_outputs,1,0).float()
                 #print("-"*20)
