@@ -85,12 +85,9 @@ def gmm_get_logits(gmm, embeddings):
 def gmm_get_logits_given_class(gmm, embeddings, classes):
     log_probs = gmm_get_logits(gmm, embeddings)  # shape is (B, C)
     B, C = log_probs.shape
-    print(log_probs.shape, classes.shape)
     #output = torch.zeros(B).to(embeddings.device)
     output = log_probs[torch.arange(B), classes]
 
-    print(output, output.shape)
-    exit()
     return output
 
 

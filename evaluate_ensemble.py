@@ -190,8 +190,9 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
                     cls = torch.argmax(outputs[i], dim=1)
                     #print(cls, cls.shape)
                     gmm = distributions.MultivariateNormal(loc=loc, covariance_matrix=cov)
-                    out = gmm_get_logits_given_class(gmm, fms[i], cls)
-                    confidences.append(gmm_get_logits(gmm, fms[i]))
+                    #out = gmm_get_logits_given_class(gmm, fms[i], cls)
+                    confidences.append(gmm_get_logits_given_class(gmm, fms[i], cls))
+                    #confidences.append(gmm_get_logits(gmm, fms[i]))
                 confidences = torch.stack(confidences)
 
                 #confidences = confidences - torch.min(confidences)
