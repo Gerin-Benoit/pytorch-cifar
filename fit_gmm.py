@@ -25,6 +25,7 @@ parser.add_argument('--c', type=float, default=0, help='Lipschitz constant: 0 fo
                                                        'for hard')
 parser.add_argument('--norm_layer', default='batchnorm', help='norm layer to use : batchnorm or actnorm')
 parser.add_argument('--mod', action='store_true', default=False, help='use increased sensitivity: average pooling shortcut and leaky relu')
+parser.add_argument('--fc_sn', action='store_true', default=False, help='apply SN on the last model MLP')
 
 parser.add_argument('--fix_statedict', action='store_true', default=False)
 
@@ -91,6 +92,8 @@ else:
     model_name += '_hard_constrained_'
 if args.mod:
     model_name += 'sens_'
+if args.fc_sn:
+    model_name += 'fcsn_'
 model_name += args.norm_layer + '_'
 model_name += str(args.seed) + '_gmm.pth'
 
