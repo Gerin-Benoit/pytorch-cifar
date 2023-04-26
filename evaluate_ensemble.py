@@ -201,7 +201,7 @@ def evaluate(testloader, nets, gmms_loc=None, gmms_cov=None, domain_shift = None
 
                 temperature = args.temp
 
-                #confidences = F.softmax(confidences / temperature, dim=0)
+                confidences = F.softmax(confidences / temperature, dim=0)
                 #print(confidences.shape)
                 confidences = confidences.unsqueeze(2).repeat(1,1,num_classes)
                 #print(confidences.shape)
