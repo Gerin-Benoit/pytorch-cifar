@@ -28,6 +28,7 @@ parser.add_argument('--resume', '-r', action='store_true',
                     help='resume from checkpoint')
 parser.add_argument('--seed', default=1, type=int, help='set the random seed')
 parser.add_argument('--num_workers', type=int, default=12, help='Number of workers')
+parser.add_argument('--n_epochs', type=int, default=200, help='Number of epochs')
 
 parser.add_argument('--c', type=float, default=0, help='Lipschitz constant: 0 for no SN, positive for soft, negative '
                                                        'for hard')
@@ -148,6 +149,8 @@ if args.mod:
     model_name += 'sens_'
 if args.fc_sn:
     model_name += 'fcsn_'
+if args.n_epochs != 200:
+    model_name += f'{args.n_epochs}e_'
 model_name += args.norm_layer + '_'
 model_name += str(args.seed)
 wandb.run.name = model_name
@@ -241,7 +244,7 @@ def test(epoch, net, criterion):
 
 
 
-for epoch in range(start_epoch, start_epoch + 200):
+for epoch in range(start_epoch, start_epoch + args.n_epochs):
     train(epoch, net, criterion, optimizer)
     test(epoch, net, criterion)
     scheduler.step()
