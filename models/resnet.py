@@ -51,7 +51,7 @@ class ConcentrateNorm(nn.Module):
         y[~mask] /= (1 + torch.log(batch_norm_expand))[~mask]
 
         if self.affine:
-            y.mul_(self.gamma).add_(self.beta)
+            y.mul_(self.gamma[None, :, None, None]).add_(self.beta[None, :, None, None])
         return y
 
 
