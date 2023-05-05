@@ -196,7 +196,7 @@ class BasicBlock(nn.Module):
 class Bottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, in_planes, planes, stride=1, norm=nn.BatchNorm2d, c=0, shape=None, mod=True):
+    def __init__(self, in_planes, planes, stride=1, norm=nn.BatchNorm2d, c=0, shape=None, mod=True, affine=False):
         super(Bottleneck, self).__init__()
         self.conv1 = wrapper_spectral_norm(nn.Conv2d(in_planes, planes, kernel_size=1, bias=False), kernel_size=1, c=c,
                                            shape=shape)
@@ -267,10 +267,10 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2, norm=norm, c=c, shape=shape)
 
         if self.concentrate:
-            self.con1 = ConcentrateNorm(64)
-            self.con2 = ConcentrateNorm(128)
-            self.con3 = ConcentrateNorm(256)
-            self.con4 = ConcentrateNorm(512)
+            self.con1 = ConcentrateNorm(64, affine=affine)
+            self.con2 = ConcentrateNorm(128, affine=affine)
+            self.con3 = ConcentrateNorm(256, affine=affine)
+            self.con4 = ConcentrateNorm(512, affine=affine)
 
         if self.fc_sn:
             self.linear = spectral_norm_fc(nn.Linear(512 * block.expansion, num_classes), 1,
@@ -356,7 +356,7 @@ def ResNet34():
 def ResNet50(c=0, num_classes=10, norm_layer='batchnorm', device='cpu', mod=False, fc_sn=False, concentrate=False):
     norm = nn.BatchNorm2d if norm_layer == 'batchnorm' else ActNormLP2D_else if norm_layer == 'actnorm_2' else ActNormLP2D
     return ResNet(Bottleneck, [3, 4, 6, 3], num_classes=num_classes,
-                  norm=norm, c=c, device=device, mod=mod, fc_sn=fc_sn, concentrate=concentrate)
+                  norm=norm, c=c, device=device, mod=mod, fc_sn=fc_sn, concentrate=concentrate, affine=True)
 
 
 def ResNet101():
