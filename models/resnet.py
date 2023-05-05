@@ -32,7 +32,7 @@ class ConcentrateNorm(nn.Module):
             print(x.shape)
             batch_norm = torch.linalg.norm(x.view(B, -1), dim=1)  # shape (B,)
             print(batch_norm.shape)
-            batch_mean_norm = torch.mean(batch_norm, keepdim=True)  # shape (1,)
+            batch_mean_norm = batch_norm.mean(dim=0, keepdim=True)  # shape (1,)
             batch_var_norm = batch_norm.var(unbiased=False)
             # batch_mean = x.mean(dim=0)
             # batch_var = x.var(dim=0, unbiased=False)
