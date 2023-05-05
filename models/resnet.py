@@ -49,7 +49,7 @@ class ConcentrateNorm(nn.Module):
         y = torch.zeros_like(x, device=x.device)
         y[mask] = (x*torch.exp(1-batch_norm_expand))[mask]
         y[~mask] = (x/(1+torch.log(batch_norm_expand)))[~mask]
-
+        y = x
         if self.affine:
             y = self.gamma * y + self.beta
         return y
