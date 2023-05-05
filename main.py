@@ -37,6 +37,9 @@ parser.add_argument('--norm_layer', default='batchnorm', help='norm layer to use
 parser.add_argument('--mod', action='store_true', default=False, help='use increased sensitivity: average pooling shortcut and leaky relu')
 
 parser.add_argument('--fc_sn', action='store_true', default=False, help='apply SN on the last model MLP')
+
+parser.add_argument('--concentrate', action='store_ture', default=False, help='use custom normalization layer')
+
 args = parser.parse_args()
 
 seed = args.seed
@@ -112,7 +115,7 @@ if args.wandb_project == 'CIFAR10':
     num_classes = 10 
 elif args.wandb_project == 'CIFAR100':
     num_classes = 100
-net = ResNet50(c=args.c, num_classes=num_classes, norm_layer=args.norm_layer, device=device, mod=args.mod, fc_sn=args.fc_sn)
+net = ResNet50(c=args.c, num_classes=num_classes, norm_layer=args.norm_layer, device=device, mod=args.mod, fc_sn=args.fc_sn, concentrate=args.concentrate)
 net = net.to(device)
 print(net)
 """
@@ -149,6 +152,8 @@ if args.mod:
     model_name += 'sens_'
 if args.fc_sn:
     model_name += 'fcsn_'
+if args.concentrate:
+    model_name += '_con'
 if args.n_epochs != 200:
     model_name += f'{args.n_epochs}e_'
 model_name += args.norm_layer + '_'

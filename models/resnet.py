@@ -14,6 +14,45 @@ from .spectral_norm_conv_inplace import *
 from .spectral_norm_fc import *
 
 
+class ConcentrateNorm(nn.Module):
+    def __init__(self, num_features, momentum=0.1, epsilon=1e-5, affine=False):
+        super(ConcentrateNorm, self).__init__()
+        self.momentum = momentum
+        self.epsilon = epsilon
+        self.affine = affine
+        if affine:
+            self.gamma = nn.Parameter(torch.ones(num_features))
+            self.beta = nn.Parameter(torch.zeros(num_features))
+        self.register_buffer('running_mean', torch.zeros(num_features))
+        self.register_buffer('running_var', torch.ones(num_features))
+
+    def forward(self, x):
+        B, C, H, W = x.shape
+        if self.training:
+            batch_norm = torch.norm(x, dim=(1, 2, 3))  # shape (B,)
+            batch_mean_norm = batch_norm.mean()  # shape (1,)
+            batch_var_norm = batch_norm.var(unbiased=False)
+            # batch_mean = x.mean(dim=0)
+            # batch_var = x.var(dim=0, unbiased=False)
+            self.running_mean = self.momentum * self.running_mean + (1 - self.momentum) * batch_mean_norm
+            self.running_var = self.momentum * self.running_var + (1 - self.momentum) * batch_var_norm
+            batch_norm_expand = batch_norm.expand(-1, C, H, W)
+        else:
+            batch_norm = self.running_mean
+            batch_var_norm = self.running_var
+
+            batch_norm_expand = batch_norm.expand(B, C, H, W)
+
+        mask = batch_norm_expand < 1
+        y = torch.zeros_like(x, device=x.device)
+        y[mask] = (x*torch.exp(1-batch_norm_expand))[mask]
+        y[~mask] = (x/(1+torch.log(batch_norm_expand)))[~mask]
+
+        if self.affine:
+            y = self.gamma * y + self.beta
+        return y
+
+
 class ActNormLP2D(nn.Module):
     def __init__(self, num_channels):
         super(ActNormLP2D, self).__init__()
@@ -188,17 +227,19 @@ class Bottleneck(nn.Module):
 
 class ResNet(nn.Module):
     def __init__(self, block, num_blocks, num_classes=10, norm=nn.BatchNorm2d, c=0, device='cpu', mod=False,
-                 fc_sn=False):
+                 fc_sn=False, concentrate=False):
         super(ResNet, self).__init__()
         img_size = (3, 32, 32)
         self.in_planes = 64
         self.mod = mod
         self.fc_sn = fc_sn
+        self.concentrate=concentrate
         self.activation = F.leaky_relu if self.mod else F.relu
 
         self.conv1 = wrapper_spectral_norm(nn.Conv2d(3, 64, kernel_size=3,
                                                      stride=1, padding=1, bias=False), kernel_size=3, c=c,
                                            shape=img_size)
+
         self.bn1 = norm(64)
         shape = (64, 32, 32)
         self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1, norm=norm, c=c, shape=shape)
@@ -208,6 +249,13 @@ class ResNet(nn.Module):
         self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2, norm=norm, c=c, shape=shape)
         shape = (512, 8, 8)
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2, norm=norm, c=c, shape=shape)
+
+        if self.concentrate:
+            self.con1 = ConcentrateNorm(64)
+            self.con2 = ConcentrateNorm(128)
+            self.con3 = ConcentrateNorm(256)
+            self.con4 = ConcentrateNorm(512)
+
         if self.fc_sn:
             self.linear = spectral_norm_fc(nn.Linear(512 * block.expansion, num_classes), 1,
                                            n_power_iterations=1)
@@ -228,12 +276,17 @@ class ResNet(nn.Module):
     def forward(self, x):
         out = self.activation(self.bn1(self.conv1(x)), inplace=True)
         # print(out.shape)
+        if self.concentrate:
+            out = self.con1(out)
         out = self.layer1(out)
-        # print(out.shape)
+        if self.concentrate:
+            out = self.con2(out)
         out = self.layer2(out)
-        # print(out.shape)
+        if self.concentrate:
+            out = self.con3(out)
         out = self.layer3(out)
-        # print(out.shape)
+        if self.concentrate:
+            out = self.con4(out)
         out = self.layer4(out)
         # print(out.shape)
         out = F.avg_pool2d(out, 4)
@@ -244,12 +297,20 @@ class ResNet(nn.Module):
     def get_features(self, x):
         out = F.relu(self.bn1(self.conv1(x)), inplace=True)
         # print(out.shape)
+        if self.concentrate:
+            out = self.con1(out)
         out = self.layer1(out)
         # print(out.shape)
+        if self.concentrate:
+            out = self.con2(out)
         out = self.layer2(out)
         # print(out.shape)
+        if self.concentrate:
+            out = self.con3(out)
         out = self.layer3(out)
         # print(out.shape)
+        if self.concentrate:
+            out = self.con4(out)
         out = self.layer4(out)
         # print(out.shape)
         out = F.avg_pool2d(out, 4)
@@ -276,10 +337,10 @@ def ResNet34():
     return ResNet(BasicBlock, [3, 4, 6, 3])
 
 
-def ResNet50(c=0, num_classes=10, norm_layer='batchnorm', device='cpu', mod=False, fc_sn=False):
+def ResNet50(c=0, num_classes=10, norm_layer='batchnorm', device='cpu', mod=False, fc_sn=False, concentrate=False):
     norm = nn.BatchNorm2d if norm_layer == 'batchnorm' else ActNormLP2D_else if norm_layer == 'actnorm_2' else ActNormLP2D
     return ResNet(Bottleneck, [3, 4, 6, 3], num_classes=num_classes,
-                  norm=norm, c=c, device=device, mod=mod, fc_sn=fc_sn)
+                  norm=norm, c=c, device=device, mod=mod, fc_sn=fc_sn, concentrate=concentrate)
 
 
 def ResNet101():
