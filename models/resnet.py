@@ -29,15 +29,13 @@ class ConcentrateNorm(nn.Module):
 
     def forward(self, x):
         B, C, H, W = x.shape
-        '''
+
         if self.training:
             batch_norm = torch.linalg.norm(x.view(B, -1), dim=1)  # shape (B,)
             batch_mean_norm = batch_norm.mean(dim=0, keepdim=True)  # shape (B,)
             batch_var_norm = batch_norm.var(unbiased=False)
-            # batch_mean = x.mean(dim=0)
-            # batch_var = x.var(dim=0, unbiased=False)
-            self.running_mean = self.momentum * self.running_mean + (1 - self.momentum) * batch_mean_norm
-            self.running_var = self.momentum * self.running_var + (1 - self.momentum) * batch_var_norm
+            self.running_mean.mul_(self.momentum).add_((1 - self.momentum) * batch_mean_norm)
+            self.running_var.mul_(self.momentum).add_((1 - self.momentum) * batch_var_norm)
 
             batch_norm_expand = batch_mean_norm.unsqueeze(1).unsqueeze(2).unsqueeze(3).expand(B, C, H, W)
         else:
@@ -46,17 +44,16 @@ class ConcentrateNorm(nn.Module):
 
             batch_norm_expand = batch_mean_norm.unsqueeze(1).unsqueeze(2).unsqueeze(3).expand(B, C, H, W)
 
-        mask = batch_norm_expand < 1 # <1
-        y = torch.zeros_like(x, device=x.device)
+        mask = batch_norm_expand < 1  # <1
+        y = x.clone()
 
-        y[mask] = (x*torch.exp(1-batch_norm_expand))[mask]
-        y[~mask] = (x/(1+torch.log(batch_norm_expand)))[~mask]
+        y[mask] *= torch.exp(1 - batch_norm_expand)[mask]
+        y[~mask] /= (1 + torch.log(batch_norm_expand))[~mask]
 
         if self.affine:
-            y = self.gamma * y + self.beta
+            y.mul_(self.gamma).add_(self.beta)
         return y
-        '''
-        return x / torch.linalg.norm(x.view(B, -1), dim=1).mean()
+
 
     def __deepcopy__(self, memo):
         new_module = ConcentrateNorm(
