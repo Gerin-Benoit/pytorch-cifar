@@ -269,9 +269,9 @@ class ResNet(nn.Module):
 
         if self.concentrate:
             self.con1 = ConcentrateNorm(64, affine=affine)
-            self.con2 = ConcentrateNorm(128, affine=affine)
-            self.con3 = ConcentrateNorm(256, affine=affine)
-            self.con4 = ConcentrateNorm(512, affine=affine)
+            self.con2 = ConcentrateNorm(256, affine=affine)
+            self.con3 = ConcentrateNorm(512, affine=affine)
+            self.con4 = ConcentrateNorm(1024, affine=affine)
 
         if self.fc_sn:
             self.linear = spectral_norm_fc(nn.Linear(512 * block.expansion, num_classes), 1,
