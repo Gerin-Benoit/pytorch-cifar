@@ -56,7 +56,7 @@ class ConcentrateNorm(nn.Module):
             y = self.gamma * y + self.beta
         return y
         '''
-        return x
+        return x / torch.linalg.norm(x.view(B, -1), dim=1)
 
     def __deepcopy__(self, memo):
         new_module = ConcentrateNorm(
@@ -252,7 +252,7 @@ class ResNet(nn.Module):
         self.in_planes = 64
         self.mod = mod
         self.fc_sn = fc_sn
-        self.concentrate=concentrate
+        self.concentrate = concentrate
         self.activation = F.leaky_relu if self.mod else F.relu
 
         self.conv1 = wrapper_spectral_norm(nn.Conv2d(3, 64, kernel_size=3,
