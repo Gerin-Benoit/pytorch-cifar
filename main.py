@@ -38,7 +38,7 @@ parser.add_argument('--mod', action='store_true', default=False, help='use incre
 
 parser.add_argument('--fc_sn', action='store_true', default=False, help='apply SN on the last model MLP')
 
-parser.add_argument('--concentrate', action='store_ture', default=False, help='use custom normalization layer')
+parser.add_argument('--concentrate', action='store_true', default=False, help='use custom normalization layer')
 
 args = parser.parse_args()
 
