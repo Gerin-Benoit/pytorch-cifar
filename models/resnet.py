@@ -56,7 +56,7 @@ class ConcentrateNorm(nn.Module):
             y = self.gamma * y + self.beta
         return y
         '''
-        return x / torch.linalg.norm(x.view(B, -1), dim=1, keepdim=True)
+        return x / torch.linalg.norm(x.view(B, -1), dim=1).mean()
 
     def __deepcopy__(self, memo):
         new_module = ConcentrateNorm(
