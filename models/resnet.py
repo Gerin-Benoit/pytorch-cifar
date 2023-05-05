@@ -45,15 +45,15 @@ class ConcentrateNorm(nn.Module):
 
             batch_norm_expand = batch_mean_norm.unsqueeze(1).unsqueeze(2).unsqueeze(3).expand(B, C, H, W)
 
-        mask = batch_norm_expand < 0 # <1
-        #y = torch.zeros_like(x, device=x.device)
+        mask = batch_norm_expand < 1 # <1
+        y = torch.zeros_like(x, device=x.device)
 
-        x[mask] = (x*torch.exp(1-batch_norm_expand))[mask]
-        x[~mask] = (x/(1+torch.log(batch_norm_expand)))[~mask]
+        y[mask] = (x*torch.exp(1-batch_norm_expand))[mask]
+        y[~mask] = (x/(1+torch.log(batch_norm_expand)))[~mask]
 
         if self.affine:
-            x = self.gamma * x + self.beta
-        return x
+            y = self.gamma * y + self.beta
+        return y
 
     def __deepcopy__(self, memo):
         new_module = ConcentrateNorm(
