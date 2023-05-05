@@ -12,6 +12,7 @@ import torch.nn.functional as F
 from torch.nn import Parameter
 from .spectral_norm_conv_inplace import *
 from .spectral_norm_fc import *
+import copy
 
 
 class ConcentrateNorm(nn.Module):
@@ -44,7 +45,7 @@ class ConcentrateNorm(nn.Module):
 
             batch_norm_expand = batch_mean_norm.unsqueeze(1).unsqueeze(2).unsqueeze(3).expand(B, C, H, W)
 
-        mask = batch_norm_expand < 1
+        mask = batch_norm_expand >= 0 # <1
         y = torch.zeros_like(x, device=x.device)
         y[mask] = (x*torch.exp(1-batch_norm_expand))[mask]
         y[~mask] = (x/(1+torch.log(batch_norm_expand)))[~mask]
@@ -52,6 +53,19 @@ class ConcentrateNorm(nn.Module):
         if self.affine:
             y = self.gamma * y + self.beta
         return y
+
+    def __deepcopy__(self, memo):
+        new_module = ConcentrateNorm(
+            num_features=self.gamma.shape[0] if self.affine else None,
+            momentum=self.momentum,
+            epsilon=self.epsilon,
+            affine=self.affine
+        )
+
+        # Copy the state_dict and load it into the new module
+        new_module.load_state_dict(copy.deepcopy(self.state_dict()))
+
+        return new_module
 
 
 class ActNormLP2D(nn.Module):
