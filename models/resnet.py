@@ -36,12 +36,12 @@ class ConcentrateNorm(nn.Module):
             # batch_var = x.var(dim=0, unbiased=False)
             self.running_mean = self.momentum * self.running_mean + (1 - self.momentum) * batch_mean_norm
             self.running_var = self.momentum * self.running_var + (1 - self.momentum) * batch_var_norm
-            batch_norm_expand = batch_norm.unsqueeze(1).unsqueeze(2).unsqueeze(3).expand(B, C, H, W)
+            batch_norm_expand = batch_mean_norm.unsqueeze(1).unsqueeze(2).unsqueeze(3).expand(B, C, H, W)
         else:
             batch_norm = self.running_mean
             batch_var_norm = self.running_var
 
-            batch_norm_expand = batch_norm.unsqueeze(0).unsqueeze(1).unsqueeze(2).unsqueeze(3).expand(B, C, H, W)
+            batch_norm_expand = batch_norm.unsqueeze(1).unsqueeze(2).unsqueeze(3).expand(B, C, H, W)
 
         mask = batch_norm_expand < 1
         y = torch.zeros_like(x, device=x.device)
