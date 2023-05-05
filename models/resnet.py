@@ -196,7 +196,7 @@ class BasicBlock(nn.Module):
 class Bottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, in_planes, planes, stride=1, norm=nn.BatchNorm2d, c=0, shape=None, mod=True, affine=False):
+    def __init__(self, in_planes, planes, stride=1, norm=nn.BatchNorm2d, c=0, shape=None, mod=True):
         super(Bottleneck, self).__init__()
         self.conv1 = wrapper_spectral_norm(nn.Conv2d(in_planes, planes, kernel_size=1, bias=False), kernel_size=1, c=c,
                                            shape=shape)
@@ -243,7 +243,7 @@ class Bottleneck(nn.Module):
 
 class ResNet(nn.Module):
     def __init__(self, block, num_blocks, num_classes=10, norm=nn.BatchNorm2d, c=0, device='cpu', mod=False,
-                 fc_sn=False, concentrate=False):
+                 fc_sn=False, concentrate=False, affine=False):
         super(ResNet, self).__init__()
         img_size = (3, 32, 32)
         self.in_planes = 64
