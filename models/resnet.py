@@ -45,9 +45,8 @@ class ConcentrateNorm(nn.Module):
             batch_norm_expand = batch_mean_norm.unsqueeze(1).unsqueeze(2).unsqueeze(3).expand(B, C, H, W)
 
         mask = batch_norm_expand < 1  # <1
-        print(torch.sum(mask)/torch.numel(mask))
         y = x.clone()
-
+        print(batch_norm_expand)
         y[mask] *= torch.exp(1 - batch_norm_expand)[mask]
         y[~mask] /= (1 + torch.log(batch_norm_expand))[~mask]
 
