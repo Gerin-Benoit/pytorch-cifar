@@ -31,7 +31,7 @@ class ConcentrateNorm(nn.Module):
         B, C, H, W = x.shape
 
         if self.training:
-            batch_norm = torch.linalg.norm(x.view(B, -1), dim=1)  # shape (B,)
+            batch_norm = torch.linalg.norm(x.view(B, -1), dim=1).detach()  # shape (B,)
             batch_mean_norm = batch_norm.mean(dim=0, keepdim=True)  # shape (B,)
             batch_var_norm = batch_norm.var(unbiased=False)
             self.running_mean.mul_(self.momentum).add_((1 - self.momentum) * batch_mean_norm)
@@ -45,6 +45,7 @@ class ConcentrateNorm(nn.Module):
             batch_norm_expand = batch_mean_norm.unsqueeze(1).unsqueeze(2).unsqueeze(3).expand(B, C, H, W)
 
         mask = batch_norm_expand < 1  # <1
+        print(torch.sum(mask)/torch.numel(mask))
         y = x.clone()
 
         y[mask] *= torch.exp(1 - batch_norm_expand)[mask]
