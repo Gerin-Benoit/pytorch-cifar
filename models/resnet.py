@@ -46,9 +46,8 @@ class ConcentrateNorm(nn.Module):
 
         mask = batch_norm_expand < 1  # <1
         y = x.clone()
-        print(batch_norm_expand)
         y[mask] *= torch.exp(1 - batch_norm_expand)[mask]
-        y[~mask] /= (1 + torch.log(batch_norm_expand))[~mask]
+        y[~mask] /= 1#(1 + torch.log(batch_norm_expand))[~mask]
 
         if self.affine:
             #print(y.shape, self.gamma[None, :, None, None].shape, self.beta[None, :, None, None].shape)
