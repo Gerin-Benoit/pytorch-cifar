@@ -27,11 +27,12 @@ parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--resume', '-r', action='store_true',
                     help='resume from checkpoint')
 parser.add_argument('--seed', default=1, type=int, help='set the random seed')
-parser.add_argument('--num_workers', type=int, default=12, help='Number of workers')
+parser.add_argument('--num_workers', type=int, default=8, help='Number of workers')
 parser.add_argument('--n_epochs', type=int, default=200, help='Number of epochs')
 
 parser.add_argument('--c', type=float, default=0, help='Lipschitz constant: 0 for no SN, positive for soft, negative '
                                                        'for hard')
+
 parser.add_argument('--norm_layer', default='batchnorm', help='norm layer to use : batchnorm or actnorm or actnorm_2d2')
 
 parser.add_argument('--mod', action='store_true', default=False, help='use increased sensitivity: average pooling shortcut and leaky relu')
@@ -39,6 +40,9 @@ parser.add_argument('--mod', action='store_true', default=False, help='use incre
 parser.add_argument('--fc_sn', action='store_true', default=False, help='apply SN on the last model MLP')
 
 parser.add_argument('--concentrate', action='store_true', default=False, help='use custom normalization layer')
+
+parser.add_argument('--version', type=str, default='1', help='version of concentrate norm')
+parser.add_argument('--affine', action='store_true', default=False, help='use affine version of concentrate norm')
 
 args = parser.parse_args()
 
@@ -76,6 +80,7 @@ if args.wandb_project == 'CIFAR10':
         root='./data', train=False, download=True, transform=transform_test)
     testloader = torch.utils.data.DataLoader(
         testset, batch_size=100, shuffle=False, num_workers=args.num_workers)
+    
 elif args.wandb_project == 'CIFAR100':
     trainset = torchvision.datasets.CIFAR100(
         root='./data', train=True, download=True, transform=transform_train)
@@ -115,7 +120,7 @@ if args.wandb_project == 'CIFAR10':
     num_classes = 10 
 elif args.wandb_project == 'CIFAR100':
     num_classes = 100
-net = ResNet50(c=args.c, num_classes=num_classes, norm_layer=args.norm_layer, device=device, mod=args.mod, fc_sn=args.fc_sn, concentrate=args.concentrate)
+net = ResNet50(c=args.c, num_classes=num_classes, norm_layer=args.norm_layer, device=device, mod=args.mod, fc_sn=args.fc_sn, concentrate=args.concentrate, affine=args.affine, version=args.version)
 net = net.to(device)
 print(net)
 """
@@ -154,8 +159,11 @@ if args.fc_sn:
     model_name += 'fcsn_'
 if args.concentrate:
     model_name += '_con'
+    model_name += args.version
+    model_name += str(args.affine)
 if args.n_epochs != 200:
     model_name += f'{args.n_epochs}e_'
+    
 model_name += args.norm_layer + '_'
 model_name += str(args.seed)
 wandb.run.name = model_name
