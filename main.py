@@ -43,6 +43,7 @@ parser.add_argument('--concentrate', action='store_true', default=False, help='u
 
 parser.add_argument('--version', type=str, default='1', help='version of concentrate norm')
 parser.add_argument('--affine', action='store_true', default=False, help='use affine version of concentrate norm')
+parser.add_argument('--per_channel', action='store_true', default=False, help='use per_channel version of concentrate norm')
 
 args = parser.parse_args()
 
@@ -120,7 +121,9 @@ if args.wandb_project == 'CIFAR10':
     num_classes = 10 
 elif args.wandb_project == 'CIFAR100':
     num_classes = 100
-net = ResNet50(c=args.c, num_classes=num_classes, norm_layer=args.norm_layer, device=device, mod=args.mod, fc_sn=args.fc_sn, concentrate=args.concentrate, affine=args.affine, version=args.version)
+net = ResNet50(c=args.c, num_classes=num_classes, norm_layer=args.norm_layer, 
+               device=device, mod=args.mod, fc_sn=args.fc_sn, concentrate=args.concentrate, 
+               affine=args.affine, version=args.version, per_channel=args.per_channel)
 net = net.to(device)
 print(net)
 """
@@ -161,6 +164,7 @@ if args.concentrate:
     model_name += '_con'
     model_name += args.version
     model_name += str(args.affine)
+    model_name += str(args.per_channel)
 if args.n_epochs != 200:
     model_name += f'{args.n_epochs}e_'
     

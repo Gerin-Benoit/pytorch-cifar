@@ -28,8 +28,8 @@ class ConcentrateNorm(nn.Module):
             self.gamma = nn.Parameter(torch.ones(num_features))
             self.beta = nn.Parameter(torch.zeros(num_features))
         if per_channel:
-            self.register_buffer('running_mean', torch.zeros(num_features))
-            self.register_buffer('running_var', torch.ones(num_features))
+            self.register_buffer('running_mean', torch.zeros(1,num_features))
+            self.register_buffer('running_var', torch.ones(1,num_features))
         else:
             self.register_buffer('running_mean', torch.zeros(1))
             self.register_buffer('running_var', torch.ones(1))
@@ -43,8 +43,8 @@ class ConcentrateNorm(nn.Module):
         """
                 
         if self.training:
-            if per_channel:
-                batch_norm = torch.linalg.norm(x.view(B, C -1), dim=2).detach()  # shape (B,C,)
+            if self.per_channel:
+                batch_norm = torch.linalg.norm(x.view(B, C, -1), dim=2).detach()  # shape (B,C,)
                 batch_mean_norm = batch_norm.mean(dim=0, keepdim=True)  # shape (1,C,)
                 batch_var_norm = batch_norm.var(dim=0, unbiased=False)
                 batch_norm_expand = batch_norm.unsqueeze(2).unsqueeze(3).expand(B, C, H, W)
@@ -63,8 +63,8 @@ class ConcentrateNorm(nn.Module):
                 self.init = True
 
         else:
-            if per_channel:
-                batch_norm = torch.linalg.norm(x.view(B, C -1), dim=2).detach()  # shape (B,C,)
+            if self.per_channel:
+                batch_norm = torch.linalg.norm(x.view(B, C, -1), dim=2).detach()  # shape (B,C,)
                 batch_norm_expand = batch_norm.unsqueeze(2).unsqueeze(3).expand(B, C, H, W)
             else:
                 batch_norm = torch.linalg.norm(x.view(B, -1), dim=1).detach()
@@ -80,9 +80,13 @@ class ConcentrateNorm(nn.Module):
         thr = self.running_mean
         std = (self.running_var).sqrt() 
         
+        if self.per_channel:
+            thr = thr.unsqueeze(-1).unsqueeze(-1) # TO CHECK
+            std = std.unsqueeze(-1).unsqueeze(-1) # TO CHECK
+        
         if self.version =='0':  # do nothing
             y = x.clone()
-            
+        
         elif self.version == '1': 
             mask = batch_norm_expand < thr  # <1
             y = x.clone()
@@ -90,12 +94,13 @@ class ConcentrateNorm(nn.Module):
             
         elif self.version =='2':
             y = x.clone()
-            mask = batch_norm_expand > thr + 2* std # <1
+            mask = batch_norm_expand > thr + 2* std 
             y[mask] /= 1 + torch.log(batch_norm_expand[mask]-(thr + 2*std)+1)
             
         elif self.version =='3':
             y = x.clone()
-            mask = batch_norm_expand > thr + 1* std # <1
+            mask = batch_norm_expand > thr + 1* std 
+            #print(y[mask].shape, batch_norm_expand[mask].shape, (thr + 1*std).shape, (1 + torch.log(batch_norm_expand[mask]-(thr + 1*std)+1)).shape)
             y[mask] /= 1 + torch.log(batch_norm_expand[mask]-(thr + 1*std)+1)
             
         """
@@ -299,7 +304,7 @@ class Bottleneck(nn.Module):
 
 class ResNet(nn.Module):
     def __init__(self, block, num_blocks, num_classes=10, norm=nn.BatchNorm2d, c=0, device='cpu', mod=False,
-                 fc_sn=False, concentrate=False, affine=False, version='1'):
+                 fc_sn=False, concentrate=False, affine=False, version='1', per_channel=False):
         super(ResNet, self).__init__()
         img_size = (3, 32, 32)
         self.in_planes = 64
@@ -323,10 +328,10 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2, norm=norm, c=c, shape=shape)
 
         if self.concentrate:
-            self.con1 = ConcentrateNorm(64, affine=affine, version=version)
-            self.con2 = ConcentrateNorm(256, affine=affine, version=version)
-            self.con3 = ConcentrateNorm(512, affine=affine, version=version)
-            self.con4 = ConcentrateNorm(1024, affine=affine, version=version)
+            self.con1 = ConcentrateNorm(64, affine=affine, version=version, per_channel=per_channel)
+            self.con2 = ConcentrateNorm(256, affine=affine, version=version, per_channel=per_channel)
+            self.con3 = ConcentrateNorm(512, affine=affine, version=version, per_channel=per_channel)
+            self.con4 = ConcentrateNorm(1024, affine=affine, version=version, per_channel=per_channel)
 
         if self.fc_sn:
             self.linear = spectral_norm_fc(nn.Linear(512 * block.expansion, num_classes), 1,
@@ -409,10 +414,10 @@ def ResNet34():
     return ResNet(BasicBlock, [3, 4, 6, 3])
 
 
-def ResNet50(c=0, num_classes=10, norm_layer='batchnorm', device='cpu', mod=False, fc_sn=False, concentrate=False, affine=False, version='1'):
+def ResNet50(c=0, num_classes=10, norm_layer='batchnorm', device='cpu', mod=False, fc_sn=False, concentrate=False, affine=False, version='1', per_channel=False):
     norm = nn.BatchNorm2d if norm_layer == 'batchnorm' else ActNormLP2D_else if norm_layer == 'actnorm_2' else ActNormLP2D
     return ResNet(Bottleneck, [3, 4, 6, 3], num_classes=num_classes,
-                  norm=norm, c=c, device=device, mod=mod, fc_sn=fc_sn, concentrate=concentrate, affine=affine, version=version)
+                  norm=norm, c=c, device=device, mod=mod, fc_sn=fc_sn, concentrate=concentrate, affine=affine, version=version, per_channel=per_channel)
 
 
 def ResNet101():
